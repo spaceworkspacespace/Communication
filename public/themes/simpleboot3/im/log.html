@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>socket 日志</title>
+	<style type="text/css">
+
+	</style>
+</head>
+
+<body>
+	<div id="app">
+		<select @change="onSwitch">
+			<option value="all">all</option>
+			<option value="log">log</option>
+			<option value="error">error</option>
+			<option value="notice">notice</option>
+			<option value="info">info</option>
+			<option value="debug">debug</option>
+			<option value="sql">sql</option>
+			<option value="system">system</option>
+			<option value="unknown">unknown</option>
+		</select>
+		<button @click="onClean">清空</button>
+		<div ref="content">
+			<div v-for="message of show">
+				<p>{{message}}</p>
+				<hr />
+			</div>
+		</div>
+	</div>
+
+	<script src="__STATIC__/js/gateway-client.js"></script>
+	<script src="__STATIC__/js/jquery-3.3.1.min.js"></script>
+	<script src="__STATIC__/js/vue-2.6.9.js"></script>
+	<script type="text/javascript">
+
+		var vue = new Vue({
+			el: "#app",
+			mounted: function () {
+				this.socket = Gateway({ url: "ws://192.168.0.80:8282", interval: 60 });
+				this.socket.onmessage = this.onMessage.bind(this);
+			},
+			data: function () {
+				return {
+					// 选中的日志类型
+					select: "all",
+					// 所有的日志
+					logs: {},
+					// 当前显示的日志
+					show: []
+				};
+			},
+			methods: {
+				onMessage: function (event) {
+					try {
+						var data = JSON.parse(event.data);
+					} catch (e) {
+						var data = event.data;
+					}
+					switch (data.type) {
+						case "CONNECTED":
+							var that = this;
+							this.socket.ajax({
+								method: "POST",
+								complete: function (xhr, status) {
+									if (status !== "success") {
+										that.log("system", "连接失败 !");
+									} else {
+										that.log("system", "连接成功 !");
+									}
+								},
+								data: { client_id: data.id }
+							});
+							break;
+						case "SEND":
+							// 接收到的正常消息
+							var log = data.data;
+							this.log(log.level, log.message);
+							break;
+						default:
+							// 插入不能识别的未知数据
+							this.log("unknown", JSON.stringify(data));
+							break;
+					}
+				},
+				// 切换日志选择
+				onSwitch(event) {
+					var type = event.target.value;
+					this.select = type;
+					if (!this.logs[type]) this.logs[type] = [];
+					if (type !== "all") {
+						this.show = this.logs[type].map(function (i) {
+							return i.message
+						});
+					}
+					else {
+						var logs = [];
+						for (var prop in this.logs) {
+							logs.push(this.logs[prop]);
+						}
+						this.show = logs.flat(1).sort(function (l, r) {
+							// console.log(l.time, r.time)
+							return l.time < r.time?1:-1;
+						}).map(function (i) {
+							return i.message;
+						});
+						// console.log(logs, this.show)
+					}
+				},
+				// 清除当前选中的所有日志
+				onClean(event) {
+					if (this.select !== "all") {
+						this.logs[this.select] = [];
+					} else {
+						this.logs = {};
+					}
+					this.show = [];
+				},
+				// 增加一条维护日志
+				log(level, message) {
+					// 加入所有维护日志
+					if (!this.logs[level]) this.logs[level] = [];
+					this.logs[level].unshift({
+						message: message,
+						time: Date.now()
+					});
+					// 如果是当前显示的类型, 加入
+					if (level === this.select ||
+						this.select === "all") {
+						this.show.unshift(message);
+					}
+				}
+			}
+		});
+	</script>
+</body>
+
+</html>
