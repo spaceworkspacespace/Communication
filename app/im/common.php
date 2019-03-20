@@ -53,7 +53,7 @@ function im_log() {
         } else if (is_null($mixed)) {
             $str = "null";
         } else if (is_object($mixed)) {
-            $str = implode([ get_class($mixed), ": ", strval($mixed)]);
+            $str = get_class($mixed);
         } else {
             $str = strval($mixed);
         }

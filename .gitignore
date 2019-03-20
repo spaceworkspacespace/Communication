@@ -1,0 +1,20 @@
+# .buildpath
+# .DS_Store
+# .project
+# .settings
+# .idea
+# /api
+# /public/api
+# /public/assets/dist
+# /node_modules
+
+/*
+
+!/app/im/
+!/app/config.php
+!/.gitignore
+!/composer.json
+!/public/themes/simpleboot3/im/
+!/public/static/js/initIM.js
+!/public/static/js/gateway-client.js
+!/Applications
