@@ -24,6 +24,13 @@ interface IIMService {
     public function findOwnFriends($userId): array;
     
     /**
+     * 通过用户 id 查询用户的所有联系人分组
+     * @param mixed $userId
+     * @return array
+     */
+    public function getOwnFriendGroups($userId): array ;
+    
+    /**
      * 通过用户 id 查询用户 im 扩展信息.
      * @param mixed $userId
      * @return array

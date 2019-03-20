@@ -3,14 +3,19 @@ namespace app\im\controller;
 
 use think\Request;
 use traits\controller\Jump;
+use app\im\service\IMServiceImpl;
 
 class ContactController  {
     use Jump;
     
     protected  $request = null;
+    protected $service = null;
+    protected $user = null;
     
     public function __construct(Request $request) {
         $this->request = $request;
+        $this->service = new IMServiceImpl();
+        $this->user = cmf_get_current_user();
     }
     
     public function getTest() {
@@ -18,6 +23,7 @@ class ContactController  {
         return 1;
     }
     
+ 
     /**
      * 上传头像, 群组和用户的.
      * @param mixed $file
@@ -38,9 +44,7 @@ class ContactController  {
         $this->error("", "/", $url, 0);
     }
     
-    public function getGroup(){
-        
-    }
+
     
     /**
      * 新建一个分组
@@ -50,6 +54,12 @@ class ContactController  {
      */
     public function postGroup(string $groupname, $avatar, string $description) {
         
+    }
+    
+    public function getGroup() {
+        $groups = $this->service->getOwnFriendGroups($this->user["id"]);
+        $this->error("", "/", $groups, 0);
+//         return json_encode($groups);
     }
     
     /**

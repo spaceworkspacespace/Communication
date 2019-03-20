@@ -1,7 +1,69 @@
 <?php
 namespace app\im\model;
 
+class UserEntireModel extends IMModel
+{
 
-class UserEntireModel extends IMModel {
-    
+    public function friendGroups()
+    {
+        return $this->hasMany("friend_groups_model", "user_id", "id");
+    }
+
+    public function friends()
+    {
+        return $this->hasMany("friends_model", "user_id", "id");
+    }
+
+    public static function contacts($userId)
+    {
+        
+        // 查找用户分组信息
+        $groups = self::get($userId)->friendGroups->toArray();
+        // 连表查询所有的用户好友信息
+        $friends = self::get($userId)->friends->toArray();
+
+        im_log("debug", $groups, "; ",$friends);
+        // 排序再确定分组和好友的关系
+        usort($groups, function ($l, $r) {
+            return $l["id"] > $r["id"] ? 1 : - 1;
+        });
+        usort($friends, function ($l, $r) {
+            return $l["group_id"] > $r["group_id"] ? 1 : - 1;
+        });
+        
+        foreach($groups as &$group) $group["list"] = [];
+
+        $groupIndex = 0;
+        $group = &$groups[$groupIndex];
+        foreach ($friends as $friend) {
+            // 判断联系人是否属于此分组
+            if ($group["id"] == $friend["group_id"]) {
+                array_push($group["list"], $friend);
+            } else {
+                // 用户是否属于下一个用户分组
+                if ($groups[$groupIndex+1]["id"] != $friend["group_id"]) {
+                    im_log("info", "联系人分组遍历查询, 用户: ", $userId, ", 联系人: ", $friend);
+                    // 找到此联系人所在的分组.
+                    $i=count($groups)-1;
+                    for(; $i>=0; $i--) {
+                        if ($groups[$i]["id"] != $friend["group_id"]) {
+                            continue;
+                        } else {
+                            array_push($groups[$i]["list"], $friend);
+                        }
+                    }
+                    // 判断是否为联系人找到正确的分组.
+                    if ($groups[$i+1]["list"][count($groups[$i+1]["list"])-1] != $friend) {
+                        im_log("notice", "存在未知分组的联系人. \n分组信息: ", $groups, ", 联系人信息: ", $friend);
+                    }
+                    unset($i);
+                    continue;
+                }
+                $group = &$groups[++$groupIndex];
+                array_push($group["list"], $friend);
+            }
+        }
+        im_log("debug", $groups);
+        return $groups;
+    }
 }

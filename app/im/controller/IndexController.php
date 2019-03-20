@@ -148,9 +148,10 @@ class IndexController extends HomeBaseController
 return $id ;
     }
 
-    public function test($name)
+    public function test()
     {
-        return addslashes("--123'2'/1  -- ") . $name;
+//         dump($this->service->findOwnFriends(1));
+        println(im_log("debug", 321));
     }
 
     public function imgClick()

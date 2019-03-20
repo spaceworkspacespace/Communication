@@ -34,12 +34,14 @@ function println() {
 /**
  * 日志函数, 第一个参数为日志等级 (ThinkCMF 中所用的等级, 这函数只是一个使用 ThinkCMF 日志功能的便利函数) 其他参数将被转换成字符串类型的日志内容.
  * 默认会在消息前面加上日志的时间和日志标记 "IM".
+ * @return boolean 当日志失败是返回 false.
  */
 function im_log() {
     $args = func_get_args();
+    if (count($args)<2) return false;
     $level = $args[0];
     $args = array_slice($args, 1);
-    if (count($args)<2) return;
+   
     // 将数据简化为字符串类型
     $strAry = array_map(function($mixed) {
         $str = "";
@@ -50,15 +52,18 @@ function im_log() {
             else $str = "false";
         } else if (is_null($mixed)) {
             $str = "null";
-        } else  {
+        } else if (is_object($mixed)) {
+            $str = implode([ get_class($mixed), ": ", strval($mixed)]);
+        } else {
             $str = strval($mixed);
         }
         return $str;
     }, $args);
     // 拼接数组为单个字符串
     $str = implode($strAry);
+    $msg = implode(["[ ",date(DateTimeInterface::ISO8601)," ] IM: ", $str]);
     // 记录日志.
-    trace( implode(["[ ",date(DateTimeInterface::ISO8601)," ] IM: ", $str]), $level);
+    trace( $msg, $level);
 }
 
 /**
@@ -123,3 +128,4 @@ function array_index_copy(array $source, array &$dest, ...$indexes) {
         }
     }
 }
+

@@ -18,12 +18,16 @@ class IMServiceImpl implements IIMService
             "mine" => $this->findUser($userId),
             // 查找出需要的数据, 除去多余的字段并改变字段名为需要的字段名.
             "friend" => array_map(function ($item) {
-                $friends = array_index_pick($item, "group_name", "user_nickname", "id", "avatar", "sign");
-                array_key_replace($friends, [
-                    "group_name" => "groupname",
-                    "user_nickname" => "username"
+                $group = array_index_pick($item, "id", "group_name", "list");
+                array_key_replace($group, [
+                    "group_name" => "groupname"
                 ]);
-                return $friends;
+                array_map(function($item) {
+                    $friends = array_index_pick($item, "user_nickname", "avatar", "sign", "id");
+                    array_key_replace($friends, "user_nickname", "username");
+                    return $friends;
+                }, $group["list"]);
+                return $group;
             }, $this->findOwnFriends($userId)),
             "group" => array_index_pick($this->findOwnGroups($userId), "id", "groupname", "avatar")
         ];
@@ -32,14 +36,14 @@ class IMServiceImpl implements IIMService
     public function findOwnFriends($userId): array
     {
         // 对参数进行验证. 确保为数字样式.
-        if (! is_numeric($userId))
-            return [];
-        $model = model("friends");
-        $friends = $model->query(implode([
-            "SELECT * FROM im_user_entire user INNER JOIN im_friends friends ON user.id = friends.user_id WHERE friends.user_id=",
-            $userId,
-            ";"
-        ]));
+//         if (! is_numeric($userId))
+//             return [];
+//         $model = model("friends");
+//         $friends = $model->query(implode([
+//             "SELECT * FROM im_user_entire user INNER JOIN im_friends friends ON user.id = friends.user_id WHERE friends.user_id=",
+//             $userId,
+//             ";"
+//         ]));
 
         // $model = model("user_entire");
         // $model->hasOne("friends", "user_id", "id", [], "LEFT OUTER")->
@@ -47,7 +51,15 @@ class IMServiceImpl implements IIMService
         // $model->hasOne($model);
         // $model->hasOne("user");
         // $model->get(["user_id"=>$userId]);
-        return $friends;
+//         $groups = model("user_entire")::get(1)->friendGroups;
+// $groups = model("user_entire")::get(1)->allFriends;
+// $groups = model("user_entire")::get(1)->allFriends;
+//             dump($groups->toArray());
+// $groups = model("friend_groups")::get(2)->members;
+// $friends = model("friend_groups")->belongsToMany("user_entire_model", "user_id", "id")
+// dump($groups);
+//         $friends = model("im")->query("");
+        return model("user_entire")::contacts($userId);
     }
 
     public function findUser($userId): array
@@ -124,6 +136,16 @@ class IMServiceImpl implements IIMService
         }
         return $groups;
     }
+    
+    public function getOwnFriendGroups($userId): array
+    {
+        $groups = model("user_entire")::get($userId)->friendGroups->toArray();
+        
+        return array_map(function($item) {
+            return array_index_pick($item, "id", "group_name");
+        }, $groups);
+    }
+
 
     
 
