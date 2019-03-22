@@ -1,116 +1,38 @@
+ 
+ 
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>查找</title>
-    <link rel="stylesheet" href="__STATIC__/libs/bootstrap/css/bootstrap.min.css">
-    <style type="text/css">
-        body {
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>发现</title>
+
+<link rel="stylesheet" href="http://local.res.layui.com/layui/src/css/layui.css">
+<style>
+
+</style>
 </head>
-
 <body>
-    <div class="container">
-        <ul class="nav nav-tabs">
-            <li class="nav-item" v-for="t of tabs" :key="t.key">
-                <a :class="['nav-link', activeTab != t.key? '': 'active']" 
-                    @click="onSwitchTab"
-                    :tab="t.key"
-                    href="javascript:;">{{t.text}}</a>
-            </li>
-        </ul>
 
-        <form class="form my-4" action="" @submit="onSearch">
-            <div class="form-group row">
-                <div class="col-9">
-                    <input ref="condition" type="hidden" name="condition" :value="activeTab" />
-                    <input ref="keyword" type="text" class="form-control" name="keyword" 
-                        :placeholder="'请输入' + (activeTab != 'groups'? '好友': '群聊') + '名称或 id 进行查找.'" />
-                </div>
-                <button type="submit" class="col-3 btn btn-primary">查找</button>
-            </div>
-        </form>
-        <search-result :data="data" :condition="activeTab" />
-    </div>
+<div style="margin: 15px;">
+  <blockquote class="layui-elem-quote">此为自定义的【查找】页面，因需求不一，所以官方暂不提供该模版结构与样式，实际使用时，可移至该文件到你的项目中，对页面自行把控。
+  <br>文件所在目录（相对于layui.js）：/css/modules/layim/html/find.html</blockquote>
+</div>
 
-    <script type="text/x-template" id="search-result">
-        <div class="row">
-            <div v-if="data === null" class="col-12">
-                1
-            </div>
-            <div v-else-if="data.length !== 0" class="col-12">
-                2
-            </div>
-            <div v-else class="col-12" style="height: 400px;">
-                <p class="py-0 my-0" style="line-height: 400px; text-align: center;">
-                    没有找到符合搜索条件的{{condition !== "groups"? "用户":"群组"}}.
-                    <a v-if="condition=='groups'" href="#">建立群组.</a>
-                </p>
-            </div>
-        </div>
-    </script>
-    <script src="__STATIC__/libs/vue-2.6.9.js"></script>
-    <script type="text/javascript">
-        new Vue({
-            el: "body > .container",
-            data: function () {
-                return {
-                    tabs: [
-                        { text: "查找好友", key: "friends" },
-                        { text: "查找群聊", key: "groups" }
-                    ],
-                    activeTab: "friends",
-                    data: []
-                };
-            },
-            methods: {
-                onSwitchTab: function(event) {
-                    var element = event.target;
-                    var tab = element.getAttribute("tab");
-                    this.activeTab = tab;
 
-                    // this.data = null;
-                },
-                onSearch: function(event) {
-                    event.preventDefault();
 
-                    var data = {};
-                    data.keyword = this.$refs.keyword.value;
-                    data.condition = this.$refs.condition.value || this.activeTab;
-
-                    $.ajax({
-                        url: "",
-                        method: "POST",
-                        data: data,
-                        context: this,
-                        success: function(data, status, xhr) {
-
-                        },
-                        error: function(xhr, status, message) {
-                            layer.msg("查找出错啦~ 请稍后重试. \n\r错误信息:" + message,
-                                { icon: 2, time: 5000 });
-                        }
-                    });
-                }
-            }, 
-            components: {
-                "search-result": {
-                    props: ["data", "condition"],
-                    template: "#search-result"
-                }
-            }
-        });
-    </script>
-    
-    <script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
-    <script src="__STATIC__/libs/bootstrap/js/bootstrap.min.js"></script>
-    <script src="__STATIC__/libs/layer/layer.js"></script>
+<script src="http://local.res.layui.com/layui/src/layui.js"></script>
+<script>
+layui.use(['layim', 'laypage'], function(){
+  var layim = layui.layim
+  ,layer = layui.layer
+  ,laytpl = layui.laytpl
+  ,$ = layui.jquery
+  ,laypage = layui.laypage;
+  
+  //一些添加好友请求之类的交互参见文档
+  
+});
+</script>
 </body>
-
 </html>

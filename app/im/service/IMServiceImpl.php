@@ -109,8 +109,8 @@ class IMServiceImpl implements IIMService
     public function getOwnFriendGroups($userId): array
     {
         $groups = model("user_entire")::get($userId)->friendGroups->toArray();
-
-        return array_map(function ($item) {
+        
+        return array_map(function($item) {
             return array_index_pick($item, "id", "group_name");
         }, $groups);
     }

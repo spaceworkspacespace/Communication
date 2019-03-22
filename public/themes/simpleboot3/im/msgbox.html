@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>消息盒子</title>
 
-<link rel="stylesheet" href="../../../layui.css?v=1">
+<link rel="stylesheet" href="__STATIC__/layim-v3.8.0/css/layui.css?v=1">
 <style>
 .layim-msgbox{margin: 15px;}
 .layim-msgbox li{position: relative; margin-bottom: 10px; padding: 0 130px 10px 60px; padding-bottom: 10px; line-height: 22px; border-bottom: 1px dotted #e2e2e2;}
@@ -27,37 +27,71 @@
 
 <ul class="layim-msgbox" id="LAY_view"></ul>
 
-<div style="margin: 0 15px;">
-  <blockquote class="layui-elem-quote">注意：这些都是模拟数据，实际使用时，需将其中的模拟接口改为你的项目真实接口。
-  <br>该模版文件所在目录（相对于layui.js）：/css/modules/layim/html/msgbox.html</blockquote>
-</div>
-
 <textarea title="消息模版" id="LAY_tpl" style="display:none;">
-{{# layui.each(d.data, function(index, item){
-  if(item.from){ }}
-    <li data-uid="{{ item.from }}" data-fromGroup="{{ item.from_group }}">
+{{# 
+layui.each(d.data, function(index, item){
+layui.each(d.udata, function(uindex, uitem){
+   if(uitem.id == item.sender_id){
+  	if(!item.agree){
+}}
+    <li data-sender_id="{{ item.sender_id }}" data-receiver_id="{{ item.receiver_id }}">
       <a href="/u/{{ item.from }}/" target="_blank">
-        <img src="{{ item.user.avatar }}" class="layui-circle layim-msgbox-avatar">
+        <img src="__STATIC__/images/headicon.png" class="layui-circle layim-msgbox-avatar">
       </a>
       <p class="layim-msgbox-user">
-        <a href="/u/{{ item.from }}/" target="_blank">{{ item.user.username||'' }}</a>
-        <span>{{ item.time }}</span>
+        <a href="/u/{{ item.from }}/" target="_blank">{{ uitem.user_nickname||'' }}</a>
+        <span>{{ item.send_date }}</span>
       </p>
       <p class="layim-msgbox-content">
-        {{ item.content }} 
-        <span>{{ item.remark ? '附言: '+item.remark : '' }}</span>
+      {{#
+    	if(!item.griup_id){
+      }}
+                      申请加入您的群聊
+      {{#	
+      	} else {
+      }}
+      		申请添加您为好友
+      {{#
+      	 }
+      }} 
+        <span>{{ item.content ? '附言: '+item.content : '' }}</span>
       </p>
       <p class="layim-msgbox-btn">
         <button class="layui-btn layui-btn-small" data-type="agree">同意</button>
         <button class="layui-btn layui-btn-small layui-btn-primary" data-type="refuse">拒绝</button>
       </p>
     </li>
-  {{# } else { }}
+{{# 
+  } else { 
+  	if(item.agree == 'y' && item.griup_id){
+}}
     <li class="layim-msgbox-system">
-      <p><em>系统：</em>{{ item.content }}<span>{{ item.time }}</span></p>
+      <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
     </li>
-  {{# }
-}); }}
+{{# 	
+	} else if(item.agree == 'n' && item.griup_id) {
+}}
+	<li class="layim-msgbox-system">
+      <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
+    </li>
+{{#	
+	} else if(item.agree == 'y' && !item.griup_id){
+}}
+	<li class="layim-msgbox-system">
+      <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
+    </li>
+{{# 
+	} else if(item.agree == 'n' && !item.griup_id){
+}}
+	<li class="layim-msgbox-system">
+      <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
+    </li>
+{{#	}
+		}
+		}
+      	})	
+	}); 
+}}
 </textarea>
 
 <!-- 
@@ -65,7 +99,7 @@
 -->
 
 
-<script src="../../../../layui.js?v=1"></script>
+<script src="__STATIC__/layim-v3.8.0/layui.js?v=1"></script>
 <script>
 layui.use(['layim', 'flow'], function(){
   var layim = layui.layim
@@ -75,17 +109,19 @@ layui.use(['layim', 'flow'], function(){
   ,flow = layui.flow;
 
   var cache = {}; //用于临时记录请求到的数据
+  
+  var caches = {};
 
   //请求消息
   var renderMsg = function(page, callback){
     
     //实际部署时，请将下述 getmsg.json 改为你的接口地址
-    
-    $.get('getmsg.json', {
+    /*$.get('../Msgbox/data', {
       page: page || 1
     }, function(res){
-      if(res.code != 0){
-        return layer.msg(res.msg);
+    	alert(res);
+      if(res != null){
+        return layer.msg(res.code);
       }
 
       //记录来源用户信息
@@ -94,7 +130,36 @@ layui.use(['layim', 'flow'], function(){
       });
 
       callback && callback(res.data, res.pages);
+    });*/
+    
+    $.ajax({
+    	url:'../Msgbox/data',
+    	data:{
+    		page: page || 1,
+    		receiver_id: 2
+    	},
+    	dataType:'json',
+    	success:function(res){
+    		
+    		if(res.code != 0){
+    	        return layer.msg(res.code);
+    	    }
+    		
+    		//记录来源用户信息
+    	    layui.each(res.udata, function(index, item){
+    	       cache[item.id] = item;
+    	    });
+    		
+    		//记录申请信息
+    	    layui.each(res.data, function(index, item){
+     	       caches[item.sender_id] = item;
+     	    });
+
+    	    callback && callback(res.data, res.udata, res.pages);
+    	}
     });
+    
+    
   };
 
   //消息信息流
@@ -103,9 +168,10 @@ layui.use(['layim', 'flow'], function(){
     ,isAuto: false
     ,end: '<li class="layim-msgbox-tips">暂无更多新消息</li>'
     ,done: function(page, next){ //加载下一页
-      renderMsg(page, function(data, pages){
+      renderMsg(page, function(data, udata, pages){
         var html = laytpl(LAY_tpl.value).render({
           data: data
+          ,udata: udata
           ,page: page
         });
         next(html, page < pages);
@@ -125,29 +191,73 @@ layui.use(['layim', 'flow'], function(){
     //同意
     agree: function(othis){
       var li = othis.parents('li')
-      ,uid = li.data('uid')
-      ,from_group = li.data('fromGroup')
-      ,user = cache[uid];
+      ,id = li.data('')
+      ,sender_id = li.data('sender_id')
+      ,receiver_id = li.data('receiver_id')
+      ,user = cache[sender_id]
+      ,jilu = caches[sender_id];
 
       //选择分组
       parent.layui.layim.setFriendGroup({
-        type: 'friend'
-        ,username: user.username
+        type: jilu.griup_id ? 'friend' : 'group'
+        ,username: user.user_nickname
         ,avatar: user.avatar
         ,group: parent.layui.layim.cache().friend //获取好友分组数据
         ,submit: function(group, index){
-          
-          //将好友追加到主面板
-          parent.layui.layim.addList({
-            type: 'friend'
-            ,avatar: user.avatar //好友头像
-            ,username: user.username //好友昵称
-            ,groupid: group //所在的分组id
-            ,id: uid //好友ID
-            ,sign: user.sign //好友签名
-          });
-          parent.layer.close(index);
-          othis.parent().html('已同意');
+          if(jilu.griup_id){
+        	  $.ajax({
+            	  url: '../Msgbox/agree',
+            	  data: {
+            		  sender_id: sender_id,
+            		  receiver_id: receiver_id
+            	  },
+            	  dataType: 'json',
+            	  success: function(res){
+            		  
+            		  if(res != 1){
+                          return layer.msg(res.msg);
+                      }
+            		  
+            	  	  //将好友追加到主面板
+                      parent.layui.layim.addList({
+                        type: 'friend'
+                        ,avatar: user.avatar //好友头像
+                        ,username: user.user_nickname //好友昵称
+                        ,groupid: group //所在的分组id
+                        ,id: user.sender_id //好友ID
+                        ,sign: user.sign //好友签名
+                      });
+                      parent.layer.close(index);
+                      othis.parent().html('已同意');
+            	  }
+              })
+          }else{
+        	  $.ajax({
+            	  url: '../Contact/postLinkGroup',
+            	  data: {
+            		  sender_id: sender_id
+            	  },
+            	  dataType: 'json',
+            	  success: function(res){
+            		  
+            		  if(res != 1){
+                          return layer.msg(res.msg);
+                      }
+            		  
+            	  	  //将好友追加到主面板
+                      parent.layui.layim.addList({
+                        type: 'group'
+                        ,avatar: user.avatar //好友头像
+                        ,username: user.user_nickname //好友昵称
+                        ,groupid: group //所在的分组id
+                        ,id: user.sender_id //好友ID
+                        ,sign: user.sign //好友签名
+                      });
+                      parent.layer.close(index);
+                      othis.parent().html('已同意');
+            	  }
+              })
+          }
         
         
           //实际部署时，请开启下述注释，并改成你的接口地址
@@ -182,17 +292,39 @@ layui.use(['layim', 'flow'], function(){
     //拒绝
     ,refuse: function(othis){
       var li = othis.parents('li')
-      ,uid = li.data('uid');
+      ,sender_id = li.data('sender_id')
+      ,receiver_id = li.data('receiver_id');
 
       layer.confirm('确定拒绝吗？', function(index){
-        $.post('/im/refuseFriend', {
-          uid: uid //对方用户ID
+    	  
+    	  
+        /*$.post('../Msgbox/refuse', {
+        	sender_id: sender_id, //对方用户ID
+        	receiver_id: receiver_id
         }, function(res){
           if(res.code != 0){
             return layer.msg(res.msg);
           }
           layer.close(index);
           othis.parent().html('<em>已拒绝</em>');
+        });*/
+        
+        $.ajax({
+        	url: '../Msgbox/refuse',
+        	data: {
+        		sender_id: sender_id, //对方用户ID
+            	receiver_id: receiver_id //我的id
+        	},
+        	dataType: 'json',
+        	success: function(res){
+        		
+        		if(res != 1){
+                    return layer.msg(res.msg);
+                }
+        		
+                layer.close(index);
+                othis.parent().html('<em>已拒绝</em>');
+        	}
         });
       });
     }

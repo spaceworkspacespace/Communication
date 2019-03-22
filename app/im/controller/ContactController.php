@@ -123,9 +123,10 @@ class ContactController extends Controller
     /**
      * 为自己添加分组
      */
-    public function postLinkGroup()
-    {}
-
+    public function postLinkGroup($sender_id) {
+        
+    }
+    
     /**
      * 为自己删除分组
      */

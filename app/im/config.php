@@ -10,12 +10,12 @@ return [
         // 日志记录级别
         'level' => [],
         "type" => "\\app\\im\\util\\SocketLogDriverImpl",
-        "remote" => "127.0.0.1:1238",
-        "remote_log_uid" => "socket_log"
+        "remote" => "192.168.0.80:1238",
+        "remote_log_uid" => "socket_log3"
     ],
     // gateway 设置
     "gateway" => [
-        "remote" => "127.0.0.1:1238",
-        "remote_log_uid" => "socket_log"
+        "remote" => "192.168.0.80:1238",
+        "remote_log_uid" => "socket_log3"
     ]
 ];
