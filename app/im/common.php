@@ -1,9 +1,13 @@
 <?php 
 
 /**
- * 调试输出语句, 会将所有参数转换为字符串的形式输出到 debug 等级的日志.
+ * 输出 debug 日志到 im_log 的便捷方法
  */
 function println() {
+    $args = func_get_args();
+    array_unshift($args, "debug");
+    call_user_func("im_log", $args);
+    /*
     $args = func_get_args();
     // 将数据简化为字符串类型
     $strAry = array_map(function($mixed) {
@@ -29,6 +33,7 @@ function println() {
     }, "");
     // 打印
     trace($str, "debug");
+    */
 }
 
 /**
@@ -53,7 +58,9 @@ function im_log() {
         } else if (is_null($mixed)) {
             $str = "null";
         } else if (is_object($mixed)) {
-            $str = get_class($mixed);
+            if (method_exists($mixed, "__toString"))
+                $str = (string)$mixed;
+            $str = implode([get_class($mixed), ": ", $str]);
         } else {
             $str = strval($mixed);
         }

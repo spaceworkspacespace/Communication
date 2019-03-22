@@ -14,15 +14,15 @@
         <h3>新建群聊</h3>
         <div class="row">
             <div class="col-12 offset-md-2 col-md-8">
-                <form action="">
+                <form action="/im/contact/group" onsubmit="return submit(event);" method="POST">
                     <div class="form-group">
                         <label for="groupname">群聊名称:</label>
                         <input type="text" class="form-control" id="groupname" name="groupname">
                     </div>
-                    <div class="form-group row">
+                    <div class="form-group ">
                         <label for="avatar" class="btn btn-primary">选取图像</label>
                         <input type="hidden" name="avatar" />
-                        <input type="file" onchange="uploadFile.apply(this, event);" class="d-none" id="avatar">
+                        <input type="file" accept="image/png,image/jpeg" onchange="uploadFile.apply(this, event);" class="d-none" id="avatar">
                         <div class="col-12">
                             <img id="display-avatar" src="" alt="请先选择头像" style="max-width: 250px; width: 100%; margin: auto;">
                         </div>
@@ -31,7 +31,8 @@
                         <label for="description">群聊描述:</label>
                         <textarea name="description" class="form-control" id="description" rows="3"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">提交申请</button>
+                    <!-- <button type="submit" class="btn btn-primary">提交申请</button> -->
+                    <input type="submit" value="提交申请" class="btn btn-primary" />
                 </form>
             </div>
         </div>
@@ -40,6 +41,24 @@
     <script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
     <script src="__STATIC__/libs/layer/layer.js"></script>
     <script type="text/javascript">
+        function submit(event) {
+            // event.preventDefault();
+            // event.stopPropagation();
+            
+            // var data = $(this).serialize();
+            // console.log(data);
+            return false;
+            //             $.ajax({
+            //     url: "/im/contact/avatar",
+            //     method: "PUT",
+            //     data: form,
+            //     headers: {"Content-Type": "multipart/form-data"},
+            //     success: function(data, status, xhr) {
+            //         console.log(data);
+            //     }
+            // });
+        }
+
         function uploadFile(event) {
             var form = new FormData();
             form.append("file", this.files[0]);
@@ -60,15 +79,6 @@
             }).catch(function (e) {
                 layer.msg(e.message);
             });
-            // $.ajax({
-            //     url: "/im/contact/avatar",
-            //     method: "PUT",
-            //     data: form,
-            //     headers: {"Content-Type": "multipart/form-data"},
-            //     success: function(data, status, xhr) {
-            //         console.log(data);
-            //     }
-            // });
         }
     </script>
 </body>

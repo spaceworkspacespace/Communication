@@ -5,6 +5,7 @@ use think\Request;
 use traits\controller\Jump;
 use app\im\service\IMServiceImpl;
 use think\Controller;
+use app\im\exception\OperationFailureException;
 
 /**
  * 控制器获取用户信息, 需要用户登录后使用.
@@ -36,14 +37,15 @@ class ContactController extends Controller
     public function getTest()
     {
         im_log("debug", "调用 test 成功.");
-        return $this->test;
+//         $this->service->getGroupByName("3");
+        $this->service->findOwnGroups(1);
     }
 
     protected function checkUserLogin()
     {
         $isLogin = $this->user && $this->user["id"];
-        im_log("info", "用户登录验证: ", $isLogin, ", user: ", $this->user, ", ", cmf_get_current_user());
-//         im_log("debug", $this);
+        im_log("info", "用户登录验证: ", $isLogin);
+
         if (!$isLogin) {
             if ($this->request->isAjax()) {
                 $this->error("您尚未登录", cmf_url("user/Login/index"));
@@ -52,6 +54,7 @@ class ContactController extends Controller
             }
         }
     }
+
 
     /**
      * 上传头像, 群组和用户的.
@@ -83,7 +86,23 @@ class ContactController extends Controller
      * @param string $description
      */
     public function postGroup(string $groupname, $avatar, string $description)
-    {}
+    {
+        
+        $validate = new \app\im\validate\GroupValidate();
+        if ($validate->check([
+            "groupname"=>$groupname, 
+            "avatar"=>$avatar, 
+            "description"=>$description])) {
+            try {
+                $this->service->createGroup($this->user["id"], $groupname, $avatar, $description);
+                $this->error("", "/", "群组\"$groupname\"创建成功.", 0);
+            } catch (OperationFailureException $e) {
+                $this->success("", "/", $e->getMessage(), 0);
+            }
+        }
+        im_log("info", "数据验证失败 !", $validate->getError());
+        $this->success("", "/", $validate->getError(), 0);
+    }
 
     /**
      * 获取所有分组
