@@ -11,6 +11,7 @@ use app\im\model\ChatGroupModel;
 use app\im\model\FriendsModel;
 use app\im\exception\OperationFailureException;
 use think\db\Query;
+use GatewayClient\Gateway;
 
 class IMServiceImpl implements IIMService
 {
@@ -196,12 +197,35 @@ class IMServiceImpl implements IIMService
             throw new OperationFailureException("查询失败了.");
         }
     }
+    
     public function linkFriendMsg($sender, $receiver, $content, $ip = null): void
     {
+        $dateStr = date(self::SQL_DATE_FORMAT);
+        $query = model("msg_box")->getQuery();
         try {
-//             model("")
+            $data = [
+                "sender_id"=>$sender,
+                "send_date"=>$dateStr,
+                "receiver_id"=>$receiver,
+                "content"=>$content
+            ];
+            if (!is_null($ip)) $data["send_ip"] = $ip;
+            $msgId = $query
+                ->insert($data, false, true);
+            if (count(Gateway::getClientIdByUid($receiver))) {
+                $msg = $query->where("id", "=", $msgId)->select()->toArray();
+                // 错误了, 没得信息.
+                if (!count($msg)) {
+                    im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
+                    throw new OperationFailureException("信息发送异常 !");
+                }
+                // 发送消息
+            }
+        } catch(OperationFailureException $e) {
+            throw $e;
         } catch(\Exception $e) {
-            
+            im_log("error", "消息插入失败 !", $e);
+            throw new OperationFailureException("消息发送失败 !");
         }
     }
 

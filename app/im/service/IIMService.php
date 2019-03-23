@@ -78,6 +78,7 @@ interface IIMService {
      * @param mixed $receiver 接收者的 id
      * @param string $content 发送的消息内容
      * @param string$ip 发送者的 ip 地址
+     * @exception \app\im\exception\OperationFailureException 当操作失败时抛出.
      */
     public function linkFriendMsg($sender, $receiver, $content, $ip=null): void;
     
@@ -88,6 +89,7 @@ interface IIMService {
      * @param mixed $groupId 群组 id
      * @param string $content 消息内容
      * @param string $ip 发送者的 ip 地址
+     * @exception \app\im\exception\OperationFailureException 当操作失败时抛出.
      */
     public function linkGroupMsg($sender, $groupId, $content, $ip=null): void;
 }

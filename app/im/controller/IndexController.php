@@ -142,38 +142,10 @@ class IndexController extends HomeBaseController
     public function members()
     {}
 
-    public function info($id)
-    {
-//         phpinfo();
-return $id ;
-    }
-
-    public function test()
-    {
-//         dump($this->service->findOwnFriends(1));
-        println(im_log("debug", 321));
-    }
+    
 
     public function imgClick()
     {
         return $this->fetch("/image_click");
-    }
-
-    public function log()
-    {
-        $method = getenv("REQUEST_METHOD");
-        if (is_string($method))
-            $method = strtoupper($method);
-
-        switch ($method) {
-            default:
-                return $this->fetch("/log");
-            case "POST":
-                $client_id = $_POST["client_id"];
-                if (isset($client_id)) {
-                    Gateway::bindUid($client_id, Config::get("gateway.remote_log_uid"));
-                }
-                break;
-        }
     }
 }

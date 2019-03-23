@@ -6,6 +6,8 @@ Route::group("im", function() {
     // 联系人操作
     Route::controller("contact", "im/contact");
 });
+Route::controller("test", "im/test");
+// Route::any("test", "im/test");
 
 // im/friend/query/:id
 // return [

@@ -18,4 +18,9 @@ return [
         "remote" => "192.168.0.80:1238",
         "remote_log_uid" => "socket_log3"
     ]
+//     ,
+//     "cache"=>[
+//         "type"=>"Redis",
+//         "host"       => '127.0.0.1'
+//     ]
 ];
