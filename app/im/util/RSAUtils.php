@@ -20,7 +20,7 @@ class RSAUtils {
      * @param array $configargs 配置参数
      * @return array 0 是私钥, 1 是公钥
      */
-    public static function genKeyPair(array $configargs): array {
+    public static function genKeyPair(array $configargs=null): array {
         $config = $configargs? 
             array_merge(self::configargs, $configargs):
             self::configargs;
@@ -64,7 +64,7 @@ class RSAUtils {
         return implode($encrypted);
     }
     
-    public static function decrypt($text, $key,  $keyType = self::PRIVATE_KEY_TYPE, $blockSize = 128): string {
+    public static function decrypt($text, $key,  $keyType = self::PUBLIC_KEY_TYPE, $blockSize = 128): string {
         $decrypted = [];
         
         $data = str_split($text, $blockSize);
