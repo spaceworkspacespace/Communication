@@ -6,6 +6,10 @@ use cmf\controller\HomeBaseController;
 use app\im\model\ChatGroupModel;
 use GatewayClient\Gateway;
 use app\im\service\IMServiceImpl;
+use app\im\model\GroupModel;
+use app\im\model\GroupsModel;
+use app\im\model\ChatUserModel;
+
 
 class IndexController extends HomeBaseController
 {

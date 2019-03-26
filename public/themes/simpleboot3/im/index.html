@@ -1,48 +1,43 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
-<title>Insert title here</title>
-<link rel="stylesheet" href="__STATIC__/layim-v3.8.0/css/layui.css">
+	<meta charset="UTF-8">
+	<title>Insert title here</title>
+	<link rel="stylesheet" href="__STATIC__/layim-v3.8.0/css/layui.css">
+	<!-- <link rel="stylesheet" href="http://192.168.0.80:1235/static/libs/layer/theme/default/layer.css?v=3.1.1"> -->
 </head>
 <style type="text/css">
-	html, body {
+	html,
+	body {
 		margin: 0;
 		padding: 0;
 	}
 </style>
+
 <body>
-	<input type="hidden" value="{:cmf_get_current_user_id()}" id="userId">
-	<img
-		onclick="clieckPosition(event)"
-		src="http://ts2.mm.bing.net/th?id=OIP.-1rQOtk8v_wKlcO-_iXx_AHaIQ&pid=15.1&w=500&h=500" />
+
+	<script type="text/javascript" src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript" src="__STATIC__/layim-v3.8.0/layui.js"></script>
-	<script type="text/javascript" src="__STATIC__/sockjs-client-1.3.0/sockjs.js"></script>
-	<script type="text/javascript" src="__STATIC__/webstomp-client-1.2.3/webstomp.js"></script>
 	<script type="text/javascript" src="__STATIC__/js/lodash.js"></script>
-	<script type="text/javascript" src="__STATIC__/js/jquery.js"></script>
+	<script type="text/javascript" src="__STATIC__/js/gateway-client.js"></script>
 	<script type="text/javascript" src="__STATIC__/js/initIM.js"></script>
 	<script type="text/javascript">
-	function myInterval()
-    {
-      	 $.post('getoffmessage', {}, function(data){
-      	 }, 'json');
-     }
+
 		var im = initIM({
 			// 通讯程序的名称
-			title : "致尚诚 IM",
+			title: "致尚诚 IM",
 			// 所有功能的接口地址
-			urls : {
-				init : "__ROOT__/im/index/init",
-				members:"__ROOT__/im/index/getgroup",
-				msgbox : "__ROOT__/im/index/msgbox",
-				find : "__ROOT__/im/index/find",
-				chatLog : "__ROOT__/im/index/chatLog",
+			urls: {
+				socket: "ws://" + document.domain + ":8282", // Socket 连接地址
+				init: "__ROOT__/im/index/init", // 获取应用初始数据地址
+				members: "__ROOT__/im/index/getgroup", // 
+				msgbox: "__ROOT__/im/index/msgbox", // 消息盒子地址
+				find: "__ROOT__/im/index/find", // 查询页面地址
+				chatLog: "__ROOT__/im/index/chatLog", // 
 			}
 		});
-		function clieckPosition(event) {
-			console.log(this, event)
-		}
 	</script>
 </body>
+
 </html>

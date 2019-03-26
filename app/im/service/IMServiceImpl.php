@@ -15,6 +15,7 @@ use GatewayClient\Gateway;
 
 class IMServiceImpl implements IIMService
 {
+    public const USER_FIELD = "id, avatar, user_nickname as username, signature as sign";
 
     public function init($userId)
     {
@@ -44,17 +45,28 @@ class IMServiceImpl implements IIMService
 
     public function getUserById($userId): array
     {
+        
         // 查找用户信息, im 扩展信息. 如果不存在, 更新进去.
-        $model = model("user");
-        $user = $model->get($userId);
-        if (is_null($user) || ! count($user = $user->getData())) {
-            $user = [
-                "user_id" => $userId,
-                "sign" => ""
-            ];
-            $model->save($user);
+//         $model = model("user");
+//         $user = $model->get($userId);
+//         if (is_null($user) || ! count($user = $user->getData())) {
+//             $user = [
+//                 "user_id" => $userId,
+//                 "sign" => ""
+//             ];
+//             $model->save($user);
+//         }
+//         return $user;
+    
+        try {
+            return model("user")->getQuery()
+                ->field(self::USER_FIELD)
+                ->select()
+                ->toArray();
+        } catch(\Exception $e) {
+            im_log("error", "查询用户失败, 用户的 id: $userId; error: ", $e);
+            throw new OperationFailureException("查询失败, 请稍后重试~");
         }
-        return $user;
     }
 
     public function findOwnGroups($userId): array
@@ -78,10 +90,13 @@ class IMServiceImpl implements IIMService
     public function findFriends($key): array
     {
         try {
-            return model("user_entire")->getQuery()
+            return model("user")->getQuery()
+                ->field(self::USER_FIELD)
                 ->where("id", "=", $key)
                 ->union(function(Query $q) use($key) {
-                    $q->where("user_nickname", "LIKE", "%$key%");
+                    $q->table("cmf_user")
+                        ->field(self::USER_FIELD)
+                        ->where("user_nickname", "LIKE", "%$key%");
                 })
                 ->select()
                 ->toArray();
@@ -198,13 +213,14 @@ class IMServiceImpl implements IIMService
         }
     }
     
-    public function linkFriendMsg($sender, $receiver, $content, $ip = null): void
+    public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip = null): void
     {
         $dateStr = date(self::SQL_DATE_FORMAT);
         $query = model("msg_box")->getQuery();
         try {
             $data = [
                 "sender_id"=>$sender,
+                "sender_friendgroup_id"=>$friendGroupId,
                 "send_date"=>$dateStr,
                 "receiver_id"=>$receiver,
                 "content"=>$content
@@ -220,6 +236,7 @@ class IMServiceImpl implements IIMService
                     throw new OperationFailureException("信息发送异常 !");
                 }
                 // 发送消息
+                GatewayServiceImpl::askToUid($receiver, $msg);
             }
         } catch(OperationFailureException $e) {
             throw $e;
@@ -230,6 +247,65 @@ class IMServiceImpl implements IIMService
     }
 
     public function linkGroupMsg($sender, $groupId, $content, $ip = null): void
-    {}
+    {
+        $dateStr = date(self::SQL_DATE_FORMAT);
+        $msgBox = model("msg_box")->getQuery();
+        $group = model("group")->getQuery();
+        
+        
+        
+        try {
+            // 查询群组管理者 id.
+            $receiver = $group -> where("id", "=", $groupId)
+                ->field("creator_id")
+                ->select();
+            if (!count($receiver) || !isset($receiver[0]["creator_id"])) {
+                im_log("error", "加入不存在的群聊 ! 群聊 id: $groupId, 查询结果: ", $receiver);
+                throw new OperationFailureException("群聊不存在~");
+            }
+            // 获取到群聊管理者的 id.
+            $receiver = $receiver[0]["creator_id"];
+            
+            $data = [
+                "sender_id"=>$sender,
+                "send_date"=>$dateStr,
+                "receiver_id"=>$receiver,
+                "group_id"=>$groupId,
+                "content"=>$content
+            ];
+            if (!is_null($ip)) $data["send_ip"] = $ip;
+            $msgId = $msgBox
+                ->insert($data, false, true);
+            if (count(Gateway::getClientIdByUid($receiver))) {
+                $msg = $msgBox->where("id", "=", $msgId)->select()->toArray();
+                // 错误了, 没得信息.
+                if (!count($msg)) {
+                    im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
+                    throw new OperationFailureException("信息发送异常 !");
+                }
+                // 发送消息
+                GatewayServiceImpl::askToUid($receiver, $msg);
+            }
+        } catch(OperationFailureException $e) {
+            throw $e;
+        } catch(\Exception $e) {
+            im_log("error", "消息插入失败 !", $e);
+            throw new OperationFailureException("消息发送失败 !");
+        }
+    }
+    
+    public function getGroupById($id): array
+    {
+        try {
+            $query = model("group")->getQuery();
+            return $query->where("id", "=", $id)
+            ->select()
+            ->toArray();
+        } catch(\Exception $e) {
+            im_log("error", "分组查询失败 ! id: $id");
+            throw new OperationFailureException("查询失败, 请稍后重试~");
+        }
+    }
+
 
 }

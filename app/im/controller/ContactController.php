@@ -79,7 +79,7 @@ class ContactController extends Controller
     }
 
     /**
-     * 新建一个分组
+     * 新建一个群聊
      *
      * @param string $groupname
      * @param mixed $avatar
@@ -87,7 +87,6 @@ class ContactController extends Controller
      */
     public function postGroup(string $groupname, $avatar, string $description)
     {
-        
         $validate = new \app\im\validate\GroupValidate();
         if ($validate->check([
             "groupname"=>$groupname, 
@@ -103,32 +102,91 @@ class ContactController extends Controller
         im_log("info", "数据验证失败 !", $validate->getError());
         $this->success("", "/", $validate->getError(), 0);
     }
-
+    
     /**
-     * 获取所有分组
+     * 获取自己的所有好友分组
      */
-    public function getGroup()
-    {
+    public function getFriendGroup() {
         $groups = $this->service->getOwnFriendGroups($this->user["id"]);
         $this->error("", "/", $groups, 0);
-        // return json_encode($groups);
     }
 
     /**
-     * 删除分组
+     * 获取群聊, 不给请求参数就是获取自己的群聊
+     */
+    public function getGroup()
+    {
+        // 请求失败的响应信息
+        $msg = "";
+        try {
+            // 尝试获取请求参数, 优先使用关键字然后才是 id.
+            $keyword = isset($_GET["keyword"])? $_GET["keyword"]: null;
+            $id = isset($_GET["id"])? $_GET["id"]: null;
+            // 查询的群聊
+            $group = null;
+            if ($keyword && is_string($keyword)) {
+                $group = $this->service->findGroups($keyword);
+            } else if ($id && is_numeric($id)) {
+                $group = $this->service->getGroupById($id);
+            } else {
+                $group = $this->service->findOwnGroups($this->user["id"]);
+            }
+            $this->error("", "/", $group, 0);
+        } catch(OperationFailureException $e) {
+            $msg = $e->getMessage();
+        }
+        $this->success($msg, "/", null, 0);
+    }
+
+    /**
+     * 查找用户信息
+     */
+    public function getUser() {
+        $msg = "";
+        $user = "";
+        try {
+            // 尝试获取请求参数, 优先使用关键字然后才是 id.
+            $keyword = isset($_GET["keyword"])? $_GET["keyword"]: null;
+            $id = isset($_GET["id"])? $_GET["id"]: null;
+            // 查找到的用户
+            $user = null;
+            if ($keyword && is_string($keyword)) {
+                $user = $this->service->findFriends($keyword);
+            } else if ($id && is_numeric($id)) {
+                $user = $this->service->getUserById($id);
+            } else {
+                $user = $this->service->getUserById($this->user["id"]);
+            }
+            $this->error("", "/", $user, 0);
+        } catch (OperationFailureException $e) {
+            $msg = $e->getMessage();
+        }
+        $this->success($msg, "/", null, 0);
+    }
+    
+    /**
+     * 删除群聊
      */
     public function deleteGroup()
     {}
 
     /**
-     * 为自己添加分组
+     * 为自己添加群聊
      */
-    public function postLinkGroup($sender_id) {
-        
+    public function postLinkGroup($id, $content) {
+        $msg = "";
+        try {
+            $ip = $this->request->ip();
+            $this->service->linkGroupMsg($this->user["id"], $id, $content, $ip);
+            $this->error("", "/", null, 0);
+        } catch (OperationFailureException $e) {
+            $msg = $e->getMessage();
+        }
+        $this->success($msg, "/", null, 0);
     }
     
     /**
-     * 为自己删除分组
+     * 为自己删除群聊
      */
     public function postUnlinkGroup()
     {}
@@ -136,12 +194,24 @@ class ContactController extends Controller
     /**
      * 为自己添加好友
      */
-    public function postLinkFriend()
-    {}
+    public function postLinkFriend($id, $friendGroupId, $content)
+    {
+        $msg = "";
+        try {
+            $ip = $this->request->ip();
+            $this->service->linkFriendMsg($this->user["id"], $friendGroupId, $id, $content, $ip);
+            $this->error("", "/", null, 0);
+        } catch (OperationFailureException $e) {
+            $msg = $e->getMessage();
+        }
+        $this->success($msg, "/", null, 0);
+    }
 
     /**
      * 为自己删除好友
      */
     public function postUnlinkFriend()
-    {}
+    {
+        
+    }
 }

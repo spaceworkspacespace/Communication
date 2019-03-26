@@ -54,6 +54,13 @@ interface IIMService {
      */
     public function getGroupByName($name, $exact = true): array;
     
+    /***
+     * 通过群聊的 id 查询群组
+     * @param number $id
+     * @return array
+     */
+    public function getGroupById($id): array ;
+    
     /**
      * 通过群组的 id (精准查找) 或名称 (模糊查找) 查找群组
      * @param mixed $key
@@ -75,12 +82,13 @@ interface IIMService {
     /**
      * 添加好友的请求
      * @param mixed $sender 发送者的 id
+     * @param mixed $friendGroupId 发送者设置的分组
      * @param mixed $receiver 接收者的 id
      * @param string $content 发送的消息内容
      * @param string$ip 发送者的 ip 地址
      * @exception \app\im\exception\OperationFailureException 当操作失败时抛出.
      */
-    public function linkFriendMsg($sender, $receiver, $content, $ip=null): void;
+    public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip=null): void;
     
   
     /**
