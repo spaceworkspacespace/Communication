@@ -1,7 +1,11 @@
 
 
-import JSEncrypt from 'jsencrypt';
+// import QuickEncrypt from 'quick-encrypt';
+// import { encryptPublicLong, decryptPrivateLong } from '@lsqswl/rsaencrypt';
+// import JSEncrypt from 'jsencrypt';
 import * as jQuery from 'jquery';
+import { RSAUtils } from './crypto';
+
 
 interface IGateway {
     onclose: (this: GatewayImpl, event: CloseEvent) => any;
@@ -63,7 +67,7 @@ interface GatewaySettings {
 // 多个 GatewayImpl 对象可能共用这两个对象.
 let publicKeys: { [key: string]: string } = {};
 // 加密解密的对象
-let jsEncrypt = new JSEncrypt();
+// let jsEncrypt = new JSEncrypt();
 
 class GatewayImpl implements IGateway, IIM {
     private _id: string; // 对象的唯一标识.
@@ -84,7 +88,9 @@ class GatewayImpl implements IGateway, IIM {
     public onxconnected: (data: GatewayMessage.MessagePayload) => any;
 
     constructor(config: GatewaySettings) {
-        if (this.constructor !== GatewayImpl) return new GatewayImpl(config);
+        if (this && this.constructor !== GatewayImpl) return new GatewayImpl(config);
+        else if (!new.target) return new GatewayImpl(config);
+
         this._pingData = config.pingData || "ping";
         this._interval = config.interval * 1000;
         this._url = config.url;
@@ -164,12 +170,13 @@ class GatewayImpl implements IGateway, IIM {
     public ajax(settings: JQuery.AjaxSettings, crypto: boolean = true): JQuery.jqXHR {
         // 如果加密选项开启, 就将 body 加密并添加 "x-gateway-encrypt" 头
         if (crypto) {
+            if (!settings.headers) settings.headers = {};
+            settings.headers["x-gateway-encrypt"] = "true";
             if (typeof settings.data !== "string") {
+                settings.headers["Content-Type"] = "application/x-www-form-urlencoded";
                 settings.data = jQuery.param(settings.data);
             }
             settings.data = this.encrypt(settings.data);
-            if (!settings.headers) settings.headers = {};
-            settings.headers["x-gateway-encrypt"] = "true";
         }
         return this._jquery.ajax(settings);
     }
@@ -190,8 +197,12 @@ class GatewayImpl implements IGateway, IIM {
      * @returns string 普通字符串.
      */
     public decrypt(text: string, pk?: string): string {
-        jsEncrypt.setPublicKey(pk || publicKeys[this._id]);
-        return jsEncrypt.decrypt(text);
+        // jsEncrypt.setPublicKey(pk || publicKeys[this._id]);
+        // let decrypted = [];
+
+        // return jsEncrypt.decrypt(text);
+        // return encryptPublicLong(text, pk);
+        return RSAUtils.decrypt(text, pk || publicKeys[this._id]);
     }
 
     /**
@@ -201,8 +212,11 @@ class GatewayImpl implements IGateway, IIM {
      * @returns string base64 编码的密文.
      */
     public encrypt(text: string, pk?: string): string {
-        jsEncrypt.setPublicKey(pk || publicKeys[this._id]);
-        return jsEncrypt.encrypt(text);
+        // jsEncrypt.setPublicKey(pk || publicKeys[this._id]);
+
+        // return jsEncrypt.encrypt(text);
+        // return QuickEncrypt.decrypt(text, pk);
+        return RSAUtils.encrypt(text, pk || publicKeys[this._id]);
     }
 }
 
