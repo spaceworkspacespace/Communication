@@ -4,6 +4,7 @@ namespace app\im\controller;
 
 use think\Controller;
 use think\Db;
+use app\user\controller\AdminUserActionController;
 
 class MsgboxController extends Controller {
     
@@ -13,7 +14,12 @@ class MsgboxController extends Controller {
      * @param unknown $receiver_id  接收人id
      * @return string
      */
-    public function data($page,$receiver_id) {
+    public function data($page) {
+        
+        
+        //获取当前登录用户信息
+        $this->user = cmf_get_current_user();
+        $receiver_id = $this->user["id"];
         
         //查询我的消息
         $mydata = Db::table('im_msg_box')
@@ -46,7 +52,7 @@ class MsgboxController extends Controller {
         $list = array("code" => 0,"page" => intval($page),"data" => $mydata,"udata" => $udata);
         //转换为json并返回
         return json_encode($list);
-
+        
     }
     
     /**
@@ -84,4 +90,5 @@ class MsgboxController extends Controller {
         
         return $res;
     }
+    
 }

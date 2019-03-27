@@ -32,21 +32,21 @@
 layui.each(d.data, function(index, item){
 layui.each(d.udata, function(uindex, uitem){
    if(uitem.id == item.sender_id){
-  	if(!item.agree){
+  	if(isEmpty(item.agree)){
 }}
     <li data-sender_id="{{ item.sender_id }}" data-receiver_id="{{ item.receiver_id }}">
-      <a href="/u/{{ item.from }}/" target="_blank">
+      <a href="#" target="_blank">
         <img src="__STATIC__/images/headicon.png" class="layui-circle layim-msgbox-avatar">
       </a>
       <p class="layim-msgbox-user">
-        <a href="/u/{{ item.from }}/" target="_blank">{{ uitem.user_nickname||'' }}</a>
+        <a href="#" target="_blank">{{ uitem.user_nickname||'' }}</a>
         <span>{{ item.send_date }}</span>
       </p>
       <p class="layim-msgbox-content">
       {{#
-    	if(!item.griup_id){
+    	if(item.griup_id){
       }}
-                      申请加入您的群聊
+                      申请加入您的群聊 
       {{#	
       	} else {
       }}
@@ -63,25 +63,25 @@ layui.each(d.udata, function(uindex, uitem){
     </li>
 {{# 
   } else { 
-  	if(item.agree == 'y' && item.griup_id){
+  	if(item.agree == 'y' && isEmpty(item.griup_id)){
 }}
     <li class="layim-msgbox-system">
       <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
     </li>
 {{# 	
-	} else if(item.agree == 'n' && item.griup_id) {
+	} else if(item.agree == 'n' && isEmpty(item.griup_id)) {
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
     </li>
 {{#	
-	} else if(item.agree == 'y' && !item.griup_id){
+	} else if(item.agree == 'y' && !isEmpty(item.griup_id)){
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
     </li>
 {{# 
-	} else if(item.agree == 'n' && !item.griup_id){
+	} else if(item.agree == 'n' && isEmpty(item.griup_id)){
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
@@ -135,8 +135,7 @@ layui.use(['layim', 'flow'], function(){
     $.ajax({
     	url:'../Msgbox/data',
     	data:{
-    		page: page || 1,
-    		receiver_id: 2
+    		page: page || 1
     	},
     	dataType:'json',
     	success:function(res){
@@ -168,7 +167,7 @@ layui.use(['layim', 'flow'], function(){
     ,isAuto: false
     ,end: '<li class="layim-msgbox-tips">暂无更多新消息</li>'
     ,done: function(page, next){ //加载下一页
-      renderMsg(page, function(data, udata, pages){
+      renderMsg(page, function(data, udata, pages){ 
         var html = laytpl(LAY_tpl.value).render({
           data: data
           ,udata: udata
@@ -199,12 +198,12 @@ layui.use(['layim', 'flow'], function(){
 
       //选择分组
       parent.layui.layim.setFriendGroup({
-        type: jilu.griup_id ? 'friend' : 'group'
+        type: isEmpty(jilu.griup_id) ? 'friend' : 'group'
         ,username: user.user_nickname
         ,avatar: user.avatar
         ,group: parent.layui.layim.cache().friend //获取好友分组数据
         ,submit: function(group, index){
-          if(jilu.griup_id){
+          if(isEmpty(jilu.griup_id)){
         	  $.ajax({
             	  url: '../Msgbox/agree',
             	  data: {
@@ -248,7 +247,7 @@ layui.use(['layim', 'flow'], function(){
                       parent.layui.layim.addList({
                         type: 'group'
                         ,avatar: user.avatar //好友头像
-                        ,username: user.user_nickname //好友昵称
+                        ,username: user.user_nickname //好友昵称   
                         ,groupid: group //所在的分组id
                         ,id: user.sender_id //好友ID
                         ,sign: user.sign //好友签名
@@ -335,6 +334,16 @@ layui.use(['layim', 'flow'], function(){
     active[type] ? active[type].call(this, othis) : '';
   });
 });
+
+//判断是否为空方法
+function isEmpty(obj)
+{
+	if(typeof obj == "undefined" || obj == null || obj == ""){
+        return true;
+    }else{
+        return false;
+    }
+}
 </script>
 </body>
 </html>
