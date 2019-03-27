@@ -31,17 +31,24 @@
 		</div>
 	</div>
 
+	<script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
 	<script src="__STATIC__/js/gateway-client.js"></script>
-	<script src="__STATIC__/js/jquery-3.3.1.min.js"></script>
 	<script src="__STATIC__/js/vue-2.6.9.js"></script>
 	<script type="text/javascript">
-
 		var vue = new Vue({
 			el: "#app",
 			mounted: function () {
-				this.socket = Gateway({ url: "ws://192.168.0.80:8282", interval: 60 });
-				this.socket.onmessage = this.onMessage.bind(this);
+				try {
+					this.socket = new Gateway({
+						url: "ws://192.168.0.80:8282",
+						interval: 60
+					});
+					this.socket.onmessage = this.onMessage.bind(this);
+				} catch(e) {
+					console.error(e);
+				}
 			},
+
 			data: function () {
 				return {
 					// 选中的日志类型
@@ -52,6 +59,7 @@
 					show: []
 				};
 			},
+
 			methods: {
 				onMessage: function (event) {
 					try {
@@ -62,7 +70,7 @@
 					switch (data.type) {
 						case "CONNECTED":
 							var that = this;
-							this.socket.ajax({
+							$.ajax({
 								method: "POST",
 								complete: function (xhr, status) {
 									if (status !== "success") {
@@ -85,6 +93,7 @@
 							break;
 					}
 				},
+
 				// 切换日志选择
 				onSwitch(event) {
 					var type = event.target.value;
@@ -102,7 +111,7 @@
 						}
 						this.show = logs.flat(1).sort(function (l, r) {
 							// console.log(l.time, r.time)
-							return l.time < r.time?1:-1;
+							return l.time < r.time ? 1 : -1;
 						}).map(function (i) {
 							return i.message;
 						});

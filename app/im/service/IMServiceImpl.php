@@ -74,7 +74,7 @@ class IMServiceImpl implements IIMService
         try {
             $res = model("groups")
                 ->getQuery()
-                ->field("id,groupname,avatar,member_count,description")
+                ->field("id, contact_id, groupname, avatar, member_count, description")
                 ->join("im_group", "im_groups.contact_id = im_group.id")
                 ->where("im_groups.user_id", "=", $userId)
                 ->select()

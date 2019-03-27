@@ -7,7 +7,7 @@ use think\Hook;
 use app\im\util\AutoSerial;
 
 class SecurityService extends AutoSerial {
-    public static const serialVersionUID = "im_serial_SecurityService";
+    public const serialVersionUID = "im_serial_SecurityService";
     private $priKey = null;
     private $pubKey = null;
     private $lastUpdateTime = null;
@@ -16,7 +16,8 @@ class SecurityService extends AutoSerial {
     ];
     
     protected function __construct() {
-        RSAUtils::updateKeyPair();
+//         RSAUtils::updateKeyPair();
+        $this->updateKeyPair();
     }
     
     /**
@@ -31,6 +32,14 @@ class SecurityService extends AutoSerial {
     }
     
     /**
+     * 获取公钥
+     * @return string|mixed
+     */
+    public function getPublicKey() {
+        return $this->pubKey;
+    }
+    
+    /**
      * 使用私钥加密内容
      * @param string $text
      * @return string
@@ -40,7 +49,7 @@ class SecurityService extends AutoSerial {
     }
     
     public function decrypt($text): string {
-        return RSAUtils::decrypt($text, $this->pubKey);
+        return RSAUtils::decrypt($text, $this->priKey, RSAUtils::PRIVATE_KEY_TYPE);
     }
     
 //     public static function encrypt($text): string {

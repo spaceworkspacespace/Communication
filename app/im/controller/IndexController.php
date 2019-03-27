@@ -9,6 +9,7 @@ use app\im\service\IMServiceImpl;
 use app\im\model\GroupModel;
 use app\im\model\GroupsModel;
 use app\im\model\ChatUserModel;
+use app\im\service\SecurityService;
 
 
 class IndexController extends HomeBaseController
@@ -180,7 +181,10 @@ class IndexController extends HomeBaseController
     }
     
     
-    //绑定
+    /**
+     * 绑定 gatewayworker 客户端 id 和 uid, 并响应公钥.
+     * @param mixed $client_id
+     */
     public function bind($client_id){
         $uid = cmf_get_current_user_id();
         Gateway::bindUid($client_id, $uid);
@@ -188,7 +192,7 @@ class IndexController extends HomeBaseController
         foreach ($group as $key){
             Gateway::joinGroup($client_id,$key['contact_id']);
         }
-        $this->error();
+        $this->error("", "/", base64_encode(SecurityService::getInstance()->getPublicKey()), 0);
     }
     
     public function contacts() {
