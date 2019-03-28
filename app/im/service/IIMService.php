@@ -100,4 +100,11 @@ interface IIMService {
      * @exception \app\im\exception\OperationFailureException 当操作失败时抛出.
      */
     public function linkGroupMsg($sender, $groupId, $content, $ip=null): void;
+    
+    /**
+     * 消息盒子提醒.
+     * @param mixed $uid 用户 id
+     * @return bool true 如果有新的消息且推送成功, 否则 false. 
+     */
+    public function pushMsgBoxNotification($uid): bool;
 }

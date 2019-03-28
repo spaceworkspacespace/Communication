@@ -102,13 +102,14 @@ var initIM = (function ($, _) {
 			// 申请好友
 			client.onxask = function (data) {
 				console.log(data);
+				layim.msgbox(data.msgCount);
 			}
 
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
-					var ks = JSON.parse(atob(data.data));
-					console.log(ks)
+					// var ks = JSON.parse(atob(data.data));
+					// console.log(ks)
 					client.setKeys(ks);
 				}, 'json');
 			}
@@ -139,9 +140,9 @@ var initIM = (function ($, _) {
 									data: data,
 									success: function (data, status, xhr) {
 										if (data.code) {
-											layer.msg("添加失败, 请稍后重试~");
+											layer.msg(data.msg || "添加失败, 请稍后重试~");
 										} else {
-											layer.msg("添加成功, 请等待回复~");
+											layer.msg(data.msg || "添加成功, 请等待回复~");
 										}
 									}
 								});

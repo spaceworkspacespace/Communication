@@ -203,7 +203,6 @@ class IMServiceImpl implements IIMService
             $condition = "%$name%";
         }
         try {
-            
             $res = $group->where("groupname", $operate, $condition)
                 ->select();
             return $res->toArray();
@@ -215,6 +214,9 @@ class IMServiceImpl implements IIMService
     
     public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip = null): void
     {
+        if ($sender == $receiver) 
+            throw new OperationFailureException("您不能添加自己为好友~"); 
+            
         $dateStr = date(self::SQL_DATE_FORMAT);
         $query = model("msg_box")->getQuery();
         try {
@@ -236,7 +238,8 @@ class IMServiceImpl implements IIMService
                     throw new OperationFailureException("信息发送异常 !");
                 }
                 // 发送消息
-                GatewayServiceImpl::askToUid($receiver, $msg);
+//                 GatewayServiceImpl::askToUid($receiver, $msg);
+                $this->pushMsgBoxNotification($receiver);
             }
         } catch(OperationFailureException $e) {
             throw $e;
@@ -251,14 +254,23 @@ class IMServiceImpl implements IIMService
         $dateStr = date(self::SQL_DATE_FORMAT);
         $msgBox = model("msg_box")->getQuery();
         $group = model("group")->getQuery();
-        
+        $groups = model("groups")->getQuery();
         
         
         try {
+            // 判断是否已是群成员.
+            if ($groups->where([
+                "user_id"=>["=", $sender],
+                "contact_id"=>["=", $groupId]
+            ])->count()) {
+                throw new OperationFailureException("您已经是群聊成员了~");
+            }
+            
             // 查询群组管理者 id.
             $receiver = $group -> where("id", "=", $groupId)
                 ->field("creator_id")
                 ->select();
+            
             if (!count($receiver) || !isset($receiver[0]["creator_id"])) {
                 im_log("error", "加入不存在的群聊 ! 群聊 id: $groupId, 查询结果: ", $receiver);
                 throw new OperationFailureException("群聊不存在~");
@@ -284,7 +296,8 @@ class IMServiceImpl implements IIMService
                     throw new OperationFailureException("信息发送异常 !");
                 }
                 // 发送消息
-                GatewayServiceImpl::askToUid($receiver, $msg);
+//                 GatewayServiceImpl::askToUid($receiver, $msg);
+                $this->pushMsgBoxNotification($receiver);
             }
         } catch(OperationFailureException $e) {
             throw $e;
@@ -302,10 +315,28 @@ class IMServiceImpl implements IIMService
             ->select()
             ->toArray();
         } catch(\Exception $e) {
-            im_log("error", "分组查询失败 ! id: $id");
+            im_log("error", "分组查询失败 ! id: $id", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
         }
     }
+    
+    public function pushMsgBoxNotification($uid): bool
+    {
+        try {
+            $msgbox = model("msg_box")->getQuery();
+            $count = $msgbox->where("receiver_id=:id AND agree IS NULL")
+                ->bind("id", $uid, \PDO::PARAM_INT)
+                ->count();
+                if ($count) {
+                    GatewayServiceImpl::askToUid($uid, ["msgCount"=>$count]);
+                }
+                return true;
+        } catch (\Exception $e) {
+            im_log("error", "消息盒子检查失败 ! id: $uid", $e);
+        }
+        return false;
+    }
+
 
 
 }
