@@ -101,14 +101,15 @@ var initIM = (function ($, _) {
 
 			// 申请好友
 			client.onxask = function (data) {
-
+				console.log(data);
 			}
 
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
-					console.log(atob(data.data))
-					client.setPublicKey(atob(data.data));
+					var ks = JSON.parse(atob(data.data));
+					console.log(ks)
+					client.setKeys(ks);
 				}, 'json');
 			}
 

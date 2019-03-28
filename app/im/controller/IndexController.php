@@ -189,10 +189,19 @@ class IndexController extends HomeBaseController
         $uid = cmf_get_current_user_id();
         Gateway::bindUid($client_id, $uid);
         $group = $this->service->findOwnGroups($uid);
+        
+        // 加密对象
+        $security = SecurityService::getInstance();
+        // 用户所持有的密钥
+        $keys = ["default"=>$security->getUserKey($uid)];
+        $keys["u-$uid"] = $keys["default"];
+        
         foreach ($group as $key){
             Gateway::joinGroup($client_id,$key['contact_id']);
+            array_push($keys, $security->getGroupKey($key['contact_id']));
         }
-        $this->error("", "/", base64_encode(SecurityService::getInstance()->getPublicKey()), 0);
+        // 返回给用户持有的密钥
+        $this->error("", "/", base64_encode(json_encode($keys)), 0);
     }
     
     public function contacts() {

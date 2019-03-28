@@ -7,7 +7,7 @@ namespace app\im\util;
  *
  */
 abstract class AutoSerial {
-    public const serialVersionUID = "im_serial_AutoSerial";
+    public const serialVersionUID = "im_serial_app\\im\\util\\AutoSerial";
     protected static $instance = null;
         
     /**
@@ -16,15 +16,37 @@ abstract class AutoSerial {
      */
     public static function getInstance() {
         if (!static::$instance) {
-            static::$instance = SerialUtil::unserialize(static::serialVersionUID);
-//             im_log("debug", static::$instance);
+            static::$instance = SerialUtil::unserialize(static::getSerialVersionUID());
             if (!static::$instance) static::$instance = new static();
         }
         return static::$instance; 
     }
     
     public function __destruct() {
-//         im_log("info", "序列化 ", get_class($this), ", uid: ", static::serialVersionUID);
-        SerialUtil::serialize(static::serialVersionUID, self::$instance);
+        SerialUtil::serialize(static::getSerialVersionUID(), static::$instance);
     }
+    
+    private static function getSerialVersionUID() {
+        // 如果子类重新声明了 serialVersionUID, 就用子类的, 否则用 im_serial_类名.
+        $class = static::class;
+        if (declareConstant($class, "serialVersionUID")) {
+            return static::serialVersionUID;
+        } else {
+            return "im_serial_$class";
+        }
+    }
+}
+
+/**
+ * 判断类是否声明常量
+ * @param string $class
+ * @param string $name
+ * @return bool
+ */
+function declareConstant($class, string $name): bool {
+    $declareClass = (new \ReflectionClass($class))
+        ->getReflectionConstant($name)
+        ->getDeclaringClass()
+        ->getName();
+    return $class === $declareClass;
 }
