@@ -14,7 +14,7 @@
         <h3>新建群聊</h3>
         <div class="row">
             <div class="col-12 offset-md-2 col-md-8">
-                <form action="/im/contact/group" onsubmit="return submit(event);" method="POST">
+                <form action="/im/contact/group" onsubmit="return submits(event);" method="POST">
                     <div class="form-group">
                         <label for="groupname">群聊名称:</label>
                         <input type="text" class="form-control" id="groupname" name="groupname">
@@ -41,22 +41,45 @@
     <script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
     <script src="__STATIC__/libs/layer/layer.js"></script>
     <script type="text/javascript">
-        function submit(event) {
-            // event.preventDefault();
-            // event.stopPropagation();
+        function submits(event) {
+
+            //阻止表单提交
+            event.preventDefault();
             
-            // var data = $(this).serialize();
-            // console.log(data);
-            return false;
-            //             $.ajax({
-            //     url: "/im/contact/avatar",
-            //     method: "PUT",
-            //     data: form,
-            //     headers: {"Content-Type": "multipart/form-data"},
-            //     success: function(data, status, xhr) {
-            //         console.log(data);
-            //     }
-            // });
+            //获取数据
+            var groupname = $("#groupname").val();
+            var avatar = $("#display-avatar").attr("src");
+            var description = $("#description").val();
+
+            var data = $(this).serialize();
+            
+            $.ajax({
+                url: "/im/contact/Group",
+                method: "post",
+                data: {
+                    groupname: groupname,
+                    avatar: avatar,
+                    description: description
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if(res.code != 1){
+                        layer.msg(res.data,{
+                            icon: 1,
+                            time: 2000 //2秒关闭（如果不配置，默认是3
+                        },function(){
+                            //关闭当前页面层
+                            var index = parent.layer.getFrameIndex(window.name); //获取窗口索引
+                            parent.layer.close(index);   
+                        });
+                    }
+                    layer.msg(res.data,{
+                        icon: 2,
+                        time: 2000
+                    });
+                }
+            });
+            
         }
 
         function uploadFile(event) {
