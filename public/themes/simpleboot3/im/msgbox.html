@@ -203,9 +203,9 @@ layui.use(['layim', 'flow'], function(){
         ,avatar: user.avatar
         ,group: parent.layui.layim.cache().friend //获取好友分组数据
         ,submit: function(group, index){
-        	if(isEmpty(jilu.griup_id)){
+        	if(isEmpty(jilu.group_id)){
         	  $.ajax({
-            	  url: '../Msgbox/agree',
+            	  url: '../Msgbox/agreeFriends',
             	  data: {
             		  sender_id: sender_id,
             		  receiver_id: receiver_id,
@@ -233,10 +233,15 @@ layui.use(['layim', 'flow'], function(){
             	  }
               })
           }else{
+        	  alert("a");
         	  $.ajax({
-            	  url: '../Contact/postLinkGroup',
+            	  url: '../MsgBox/agreeGroup',
             	  data: {
-            		  sender_id: sender_id
+            		  sender_id: sender_id,
+            		  group_id: jilu.group_id,
+            		  send_ip: user.last_login_ip,
+            		  sender_nickname: user.user_nickname,
+            		  receiver_id: receiver_id
             	  },
             	  dataType: 'json',
             	  success: function(res){

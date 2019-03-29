@@ -82,7 +82,7 @@ class MsgboxController extends Controller {
      * @param unknown $group_id_you 请求人设置给接收人的分组id
      * @return number|string
      */
-    public function agree($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you) {
+    public function agreeFriends($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you) {
         
         //定义受影响行数
         $res = 0;
@@ -96,6 +96,25 @@ class MsgboxController extends Controller {
             //获取当前时间
             $nowDate = date('Y-m-d h:i:s', time());
             
+            
+            $groupOfNull = Db::table('im_friend_groups')
+            ->where([
+                'id' => $group_id_me,
+                'user_id' => $sender_id
+            ])
+            ->select();
+            //判断请求人是否有这个分组
+            if($groupOfNull){
+                
+               Db::table('im_friend_groups')
+               ->insert([
+                   'user_id' => $sender_id,
+                   'priority' => 1,
+                   'member_count' => 0
+               ]);
+               
+            }
+            
             //接受好友申请
             Db::table('im_msg_box')
             ->where([
@@ -107,21 +126,39 @@ class MsgboxController extends Controller {
             //插入加为好友之后的系统消息并返回主键id
             $last_reads_you = Db::table('im_chat_user')
             ->insertGetId([
-                'sender_id' => $sender_id, 'send_ip' => $send_ip, 'receiver_id' => $receiver_id, 'content' => '我们已经成为好友啦，赶快开始聊天吧！'
+                'sender_id' => $sender_id, 
+                'send_ip' => $send_ip, 
+                'receiver_id' => $receiver_id, 
+                'content' => '我们已经成为好友啦，赶快开始聊天吧！'
             ]);
             $last_reads_me = Db::table('im_chat_user')
             ->insertGetId([
-                'sender_id' => $receiver_id, 'send_ip' => $receiver_ip, 'receiver_id' => $sender_id, 'content' => '我们已经成为好友啦，赶快开始聊天吧！'
+                'sender_id' => $receiver_id, 
+                'send_ip' => $receiver_ip, 
+                'receiver_id' => $sender_id, 
+                'content' => '我们已经成为好友啦，赶快开始聊天吧！'
             ]);
             
             //插入两人成为好友的信息
             Db::table('im_friends')
             ->insert([
-                'user_id' => $sender_id, 'contact_id' => $receiver_id, 'group_id' => $group_id_me, 'contact_date' => $nowDate, 'last_active_time' => $nowDate, 'last_send_time' => $nowDate, 'last_reads' => $last_reads_you
+                'user_id' => $sender_id, 
+                'contact_id' => $receiver_id, 
+                'group_id' => $group_id_me, 
+                'contact_date' => $nowDate, 
+                'last_active_time' => $nowDate, 
+                'last_send_time' => $nowDate, 
+                'last_reads' => $last_reads_you
             ]);
             Db::table('im_friends')
             ->insert([
-                'user_id' => $receiver_id, 'contact_id' => $sender_id, 'group_id' => $group_id_you, 'contact_date' => $nowDate, 'last_active_time' => $nowDate, 'last_send_time' => $nowDate, 'last_reads' => $last_reads_me
+                'user_id' => $receiver_id, 
+                'contact_id' => $sender_id, 
+                'group_id' => $group_id_you, 
+                'contact_date' => $nowDate, 
+                'last_active_time' => $nowDate, 
+                'last_send_time' => $nowDate, 
+                'last_reads' => $last_reads_me
             ]);
             
             //提交事务
@@ -134,6 +171,57 @@ class MsgboxController extends Controller {
         }
         
         return $res;
+    }
+    
+    public function agreeGroup($sender_id, $group_id, $send_ip, $sender_nickname, $receiver_id) {
+        
+        //定义受影响行数
+        $res = 0;
+        
+        //开启事务
+        Db::startTrans();
+        try {
+            
+            //获取当前时间
+            $nowDate = date('Y-m-d h:i:s', time());
+            
+            $last_reads = Db::table('im_chat_group')
+            ->insertGetId([
+                'group_id' => $group_id,
+                'sender_id' => $sender_id,
+                'send_ip' => $send_ip,
+                'content' => '用户'.$sender_nickname.'加入了群聊'
+            ]);
+            
+            Db::table('im_groups')
+            ->insert([
+                'user_id' => $sender_id,
+                'contact_id' => $group_id,
+                'contact_date' => $nowDate,
+                'last_active_time' => $nowDate,
+                'last_send_time' => $nowDate,
+                'last_reads' => $last_reads
+            ]);
+            
+            //接受加群申请
+            Db::table('im_msg_box')
+            ->where([
+                'sender_id' => $sender_id,
+                'receiver_id' => $receiver_id
+            ])
+            ->update(['agree' => 'y']);
+            
+            //提交事务
+            Db::commit();
+            $res = 1;
+        } catch (\Exception $e) {
+            //回滚事务
+            Db::rollback();
+            $res = 0;
+        }
+        
+        return $res;
+        
     }
     
 }
