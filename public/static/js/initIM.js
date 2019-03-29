@@ -7,6 +7,7 @@ var initIM = (function ($, _) {
 		}
 
 		layui.use("layim", function (layim) {
+			// layim = layui.mobile.layim;
 			if (!layim) {
 				console.error("IM 初始化失败, 请确认正确载入依赖 !");
 				return;
@@ -53,6 +54,7 @@ var initIM = (function ($, _) {
 				msgbox: urls.msgbox,
 				find: urls.find,
 				chatLog: urls.chatLog,
+				copyright: true,
 			});
 
 			// 监听发送消息
@@ -96,20 +98,15 @@ var initIM = (function ($, _) {
 						});
 					}
 				}
-				break;
 			}
 
-			// 申请好友
-			client.onxask = function (data) {
-				console.log(data);
-				layim.msgbox(data.msgCount);
-			}
+			// 有新的请求信息
+			client.onxask = function (data) { layim.msgbox(data.msgCount); }
 
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
-					// var ks = JSON.parse(atob(data.data));
-					// console.log(ks)
+					var ks = JSON.parse(atob(data.data));
 					client.setKeys(ks);
 				}, 'json');
 			}

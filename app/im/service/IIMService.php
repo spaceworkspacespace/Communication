@@ -107,4 +107,17 @@ interface IIMService {
      * @return bool true 如果有新的消息且推送成功, 否则 false. 
      */
     public function pushMsgBoxNotification($uid): bool;
+    
+    /**
+     * 读取群组的聊天记录
+     * @param mixed $groupId
+     */
+    public function readChatGroup($groupId, int $pageNo=0, int $pageSize=100);
+    
+    
+    /**
+     * 读取好友的聊天记录
+     * @param mixed $userId
+     */
+    public function readChatUser($Id, $userId, int $pageNo, int $pageSize): \think\Collection;
 }

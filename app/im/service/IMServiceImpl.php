@@ -12,12 +12,19 @@ use app\im\model\FriendsModel;
 use app\im\exception\OperationFailureException;
 use think\db\Query;
 use GatewayClient\Gateway;
+use think\Db;
 use app\im\model\UserModel;
 
 class IMServiceImpl implements IIMService
 {
+    private static $instance;
     public const USER_FIELD = "id, avatar, user_nickname as username, signature as sign";
 
+    public static function getInstance(): IIMService {
+        if (!static::$instance) static::$instance = new static();
+        return static::$instance;
+    }
+    
     public function init($userId)
     {
         return [
@@ -41,6 +48,7 @@ class IMServiceImpl implements IIMService
 
     public function findOwnFriends($userId): array
     {
+        // return model("user_entire")::contacts($userId);
         return UserModel::contacts($userId);
     }
 
@@ -65,7 +73,7 @@ class IMServiceImpl implements IIMService
                 ->select()
                 ->toArray();
         } catch(\Exception $e) {
-//             im_log("error", "查询用户失败, 用户的 id: $userId; error: ", $e);
+            im_log("error", "查询用户失败, 用户的 id: $userId; error: ", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
         }
     }
@@ -80,10 +88,10 @@ class IMServiceImpl implements IIMService
                 ->where("im_groups.user_id", "=", $userId)
                 ->select()
                 ->toArray();
-//             im_log("debug", $res);
+            // im_log("debug", $res);
             return $res; 
         } catch(\Exception $e) {
-//             im_log("error", "分组查询失败了, 用户的 id: $userId; error: ", $e);
+            im_log("error", "分组查询失败了, 用户的 id: $userId; error: ", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
         }
     }
@@ -102,7 +110,7 @@ class IMServiceImpl implements IIMService
                 ->select()
                 ->toArray();
         } catch(\Exception $e) {
-//             im_log("error", "查找用户失败. error: ", $e);
+            im_log("error", "查找用户失败. error: ", $e);
             throw new OperationFailureException("查找失败, 请稍后重试~");
         }
     }
@@ -118,7 +126,7 @@ class IMServiceImpl implements IIMService
                 ->select()
                 ->toArray();
         } catch(\Exception $e) {
-//             im_log("error", "查找分组失败. error: ", $e);
+            im_log("error", "查找分组失败. error: ", $e);
             throw new OperationFailureException("查找失败, 请稍后重试~");
         }
     }
@@ -159,7 +167,7 @@ class IMServiceImpl implements IIMService
             ], false, true);
             
             if (!is_numeric($groupId)) {
-//                 im_log("error", "创建群聊失败, id: ", $groupId);
+                im_log("error", "创建群聊失败, id: ", $groupId);
                 throw new OperationFailureException("无法获取群聊 id.");
             }
             
@@ -172,7 +180,7 @@ class IMServiceImpl implements IIMService
             ], false, true);
 
             if (!is_numeric($chatId)) {
-//                 im_log("error", "插入群信息失败, id: ", $chatId);
+                im_log("error", "插入群信息失败, id: ", $chatId);
                 throw new OperationFailureException("无法获取群聊 id.");
             }
 
@@ -185,9 +193,9 @@ class IMServiceImpl implements IIMService
                 "last_reads" => $chatId
             ]);
             $group->commit();
-//             im_log("info", "创建群聊成功. 用户: ", $creator, "; 群聊: ", $groupId, ", ", $groupName);
+            im_log("info", "创建群聊成功. 用户: ", $creator, "; 群聊: ", $groupId, ", ", $groupName);
         } catch (\Exception $e) {
-//             im_log("error", "创建群聊失败 !", "错误信息: ", $e);
+            im_log("error", "创建群聊失败 !", "错误信息: ", $e);
             $group->rollback();
             throw new OperationFailureException("群聊创建失败, 请稍后重试~");
         }
@@ -208,7 +216,7 @@ class IMServiceImpl implements IIMService
                 ->select();
             return $res->toArray();
         } catch(\ErrorException $e) {
-//             im_log("error", "查询失败 !", $e);
+            im_log("error", "查询失败 !", $e);
             throw new OperationFailureException("查询失败了.");
         }
     }
@@ -235,7 +243,7 @@ class IMServiceImpl implements IIMService
                 $msg = $query->where("id", "=", $msgId)->select()->toArray();
                 // 错误了, 没得信息.
                 if (!count($msg)) {
-//                     im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
+                    im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
                     throw new OperationFailureException("信息发送异常 !");
                 }
                 // 发送消息
@@ -245,7 +253,7 @@ class IMServiceImpl implements IIMService
         } catch(OperationFailureException $e) {
             throw $e;
         } catch(\Exception $e) {
-//             im_log("error", "消息插入失败 !", $e);
+            im_log("error", "消息插入失败 !", $e);
             throw new OperationFailureException("消息发送失败 !");
         }
     }
@@ -273,7 +281,7 @@ class IMServiceImpl implements IIMService
                 ->select();
             
             if (!count($receiver) || !isset($receiver[0]["creator_id"])) {
-//                 im_log("error", "加入不存在的群聊 ! 群聊 id: $groupId, 查询结果: ", $receiver);
+                im_log("error", "加入不存在的群聊 ! 群聊 id: $groupId, 查询结果: ", $receiver);
                 throw new OperationFailureException("群聊不存在~");
             }
             // 获取到群聊管理者的 id.
@@ -293,7 +301,7 @@ class IMServiceImpl implements IIMService
                 $msg = $msgBox->where("id", "=", $msgId)->select()->toArray();
                 // 错误了, 没得信息.
                 if (!count($msg)) {
-//                     im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
+                    im_log("error", "消息盒子信息插入异常. id: $msgId, 内容: ", $msg);
                     throw new OperationFailureException("信息发送异常 !");
                 }
                 // 发送消息
@@ -303,7 +311,7 @@ class IMServiceImpl implements IIMService
         } catch(OperationFailureException $e) {
             throw $e;
         } catch(\Exception $e) {
-//             im_log("error", "消息插入失败 !", $e);
+            im_log("error", "消息插入失败 !", $e);
             throw new OperationFailureException("消息发送失败 !");
         }
     }
@@ -313,8 +321,8 @@ class IMServiceImpl implements IIMService
         try {
             $query = model("group")->getQuery();
             return $query->where("id", "=", $id)
-            ->select()
-            ->toArray();
+                ->select()
+                ->toArray();
         } catch(\Exception $e) {
             im_log("error", "分组查询失败 ! id: $id", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
@@ -337,7 +345,67 @@ class IMServiceImpl implements IIMService
         }
         return false;
     }
+    
+    public function readChatGroup($groupId, int $pageNo=0, int $pageSize=100)
+    {
+        if ($pageSize > 500)$pageSize = 100;
+        try {
+            $pageSize=1;
+            return model("chat_group")->getQuery()
+                ->alias("g")
+                ->field("u.id AS id, u.user_nickname AS username, avatar, send_date AS date, content")
+                ->join(["cmf_user"=> "u"], "g.sender_id = u.id")
+                ->where("group_id=:gid")
+                ->bind("gid", $groupId, \PDO::PARAM_INT)
+                ->order("date", "desc")
+//                 ->paginate($pageSize);
+                ->limit($pageNo*$pageSize, $pageSize)
+                ->select();
+        } catch(\Exception $e) {
+            im_log("error", "读取群组聊天信息失败! $groupId", $e);
+            throw new OperationFailureException("查询失败, 请稍后重试~");
+        }
+    }
 
-
+    public function readChatUser($Id, $userId, int $pageNo, int $pageSize): \think\Collection
+    {
+        if ($pageSize > 500)$pageSize = 100;
+        try {
+            $map=[];
+            $mapx=[];
+            $map['chat.sender_id'] = $Id;
+            $map['chat.receiver_id'] = $userId;
+            $map['chat.visible_sender']=1;
+            $mapx['chat.sender_id'] = $userId;
+            $mapx['chat.receiver_id'] = $Id;
+            $mapx['chat.visible_receiver']=1;
+           
+            return Db::table('im_chat_user chat')
+                ->where($map)
+                ->whereOr($mapx)
+                ->join(['cmf_user'=>'user'],'chat.sender_id=user.id')
+                ->field('user.id, avatar, user_nickname AS username, send_date AS date, content')
+                ->order('date desc')
+//                 ->paginate($pageSize);
+                ->limit($pageNo*$pageSize, $pageSize)
+                ->select();
+            
+//             return model("chat_user")->getQuery()
+//                 ->alias("chat")
+//                 ->field("user.id, avatar, user_nickname AS username, send_date AS date, content")
+//                 ->join(["cmf_user"=> "user"], "chat.sender_id=user.id ")
+//                 ->where("chat.sender_id=:id AND chat.receiver_id=:id2 AND chat.visible_sender=1 OR chat.sender_id=:id2 AND chat.receiver_id=id AND chat.visible_receiver=1")
+//                 ->bind([
+//                     "id"=>[ $Id, \PDO::PARAM_INT],
+//                     "id2"=>[ $userId, \PDO::PARAM_INT],
+//                 ])
+//                 ->order("date", "desc")
+//                 ->limit($pageNo*$pageSize, $pageSize)
+//                 ->select();
+        } catch(\Exception $e) {
+            im_log("error", "读取聊天信息失败! $userId", $e);
+            throw new OperationFailureException("查询失败, 请稍后重试~");
+        }
+    }
 
 }

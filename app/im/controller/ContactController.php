@@ -24,13 +24,11 @@ class ContactController extends Controller
 
     protected $user = null;
 
-    protected $test = 0;
-
     public function __construct(Request $request)
     {
         $this->user = cmf_get_current_user();
         parent::__construct($request);
-        $this->service = new IMServiceImpl();
+        $this->service = IMServiceImpl::getInstance();
         
     }
 

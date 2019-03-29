@@ -10,12 +10,17 @@ use think\Hook;
 use app\im\util\AutoSerial;
 use app\im\util\RSAUtils;
 use app\im\service\SecurityService;
+use app\im\service\IMServiceImpl;
 
 
 class TestController extends Controller {
     public function getInfo()
     {
         phpinfo();
+    }
+    
+    public function getSql() {
+        var_dump(IMServiceImpl::getInstance()->readChatUser(cmf_get_current_user_id(), 2, 0, 100));
     }
     
     public function getDecrypt() {

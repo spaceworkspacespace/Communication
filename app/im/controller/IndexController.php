@@ -10,6 +10,7 @@ use app\im\model\GroupModel;
 use app\im\model\GroupsModel;
 use app\im\model\ChatUserModel;
 use app\im\service\SecurityService;
+use app\im\service\GatewayServiceImpl;
 
 
 class IndexController extends HomeBaseController
@@ -25,14 +26,14 @@ class IndexController extends HomeBaseController
         // $this->checkUserLogin();
         // }
         // 初始化 gateway
-        $remote = Config::get("gateway.remote");
-        if (is_string($remote)) {
-            Gateway::$registerAddress = $remote;
-        } else {
-            throw new \Exception("Gateway 地址未设置 !");
-        }
+//         $remote = Config::get("gateway.remote");
+//         if (is_string($remote)) {
+//             Gateway::$registerAddress = $remote;
+//         } else {
+//             throw new \Exception("Gateway 地址未设置 !");
+//         }
         // service
-        $this->service = new IMServiceImpl();
+        $this->service = IMServiceImpl::getInstance();
     }
 
     public function index()
@@ -139,7 +140,7 @@ class IndexController extends HomeBaseController
                     $data['data'][] = $str['mine'];
                     $this->friendchat($id,$str['mine']['content'],'friend');
                     if(Gateway::isUidOnline($id)){
-                        Gateway::sendToUid($id, json_encode($data));
+                        GatewayServiceImpl::msgToUid($id, json_encode($data));
                         //聊天记录储存
                         $data = json_encode(['code'=>1,'id'=>$id]);
                     }else{
@@ -154,7 +155,7 @@ class IndexController extends HomeBaseController
                     $str['mine']['id'] = $id;
                     $data['data'][] = $str['mine'];
                     $this->friendchat($id,$str['mine']['content'],'group');
-                    Gateway::sendToGroup($id, json_encode($data));
+                    GatewayServiceImpl::msgToGroup($id, json_encode($data));
                     //聊天记录储存
                     $data = json_encode(['code'=>1,'type'=>'group','id'=>$id]);
                 break;
