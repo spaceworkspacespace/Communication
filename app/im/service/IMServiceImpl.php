@@ -28,28 +28,17 @@ class IMServiceImpl implements IIMService
     public function init($userId)
     {
         return [
-            "mine" => $this->getUserById($userId),
-            // 查找出需要的数据, 除去多余的字段并改变字段名为需要的字段名.
-            "friend" => array_map(function ($item) {
-                $group = array_index_pick($item, "id", "group_name", "list");
-                array_key_replace($group, [
-                    "group_name" => "groupname"
-                ]);
-                array_map(function ($item) {
-                    $friends = array_index_pick($item, "user_nickname", "avatar", "sign", "id");
-                    array_key_replace($friends, "user_nickname", "username");
-                    return $friends;
-                }, $group["list"]);
-                return $group;
-            }, $this->findOwnFriends($userId)),
-            "group" =>$this->findOwnGroups($userId)
+            "mine"=>[],
+            "friend" => $this->findOwnFriends($userId),
+            "group" => $this->findOwnGroups($userId)
         ];
     }
 
     public function findOwnFriends($userId): array
     {
         // return model("user_entire")::contacts($userId);
-        return UserModel::contacts($userId);
+//         return UserModel::contacts($userId);
+        return model("friends")->getFriendAndGroup($userId);
     }
 
     public function getUserById($userId): array
@@ -70,6 +59,8 @@ class IMServiceImpl implements IIMService
         try {
             return model("user")->getQuery()
                 ->field(self::USER_FIELD)
+                ->where("id=:id")
+                ->bind(["id"=>[$userId, \PDO::PARAM_INT]])
                 ->select()
                 ->toArray();
         } catch(\Exception $e) {
@@ -350,7 +341,7 @@ class IMServiceImpl implements IIMService
     {
         if ($pageSize > 500)$pageSize = 100;
         try {
-            $pageSize=1;
+//             $pageSize=1;
             return model("chat_group")->getQuery()
                 ->alias("g")
                 ->field("u.id AS id, u.user_nickname AS username, avatar, send_date AS date, content")

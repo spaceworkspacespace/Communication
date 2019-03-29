@@ -76,10 +76,11 @@ class IndexController extends HomeBaseController
         if (is_array($user) && is_numeric($user["id"])) {
             im_log("info", "id: ", $user["id"], "用户信息返回.");
             $info = $this->service->init($user["id"]);
-            array_index_copy($user, $info["mine"], "user_nickname", "avatar");
+            array_index_copy($user, $info["mine"], "user_nickname", "avatar", "id", "signature");
             array_key_replace($info["mine"], [
                 "user_nickname"=>"username",
-                "user_id" => "id"
+                "user_id" => "id",
+                "signature"=>"sign"
             ]);
         } else {
             im_log("info", "游客信息返回.");
