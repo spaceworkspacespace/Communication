@@ -63,25 +63,25 @@ layui.each(d.udata, function(uindex, uitem){
     </li>
 {{# 
   } else { 
-  	if(item.agree == 'y' && isEmpty(item.griup_id)){
+  	if(item.agree == 'y' && isEmpty(item.group_id)){
 }}
     <li class="layim-msgbox-system">
       <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
     </li>
 {{# 	
-	} else if(item.agree == 'n' && isEmpty(item.griup_id)) {
+	} else if(item.agree == 'n' && isEmpty(item.group_id)) {
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的好友申请<span>{{ item.send_date }}</span></p>
     </li>
 {{#	
-	} else if(item.agree == 'y' && !isEmpty(item.griup_id)){
+	} else if(item.agree == 'y' && !isEmpty(item.group_id)){
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已同意&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
     </li>
 {{# 
-	} else if(item.agree == 'n' && isEmpty(item.griup_id)){
+	} else if(item.agree == 'n' && !isEmpty(item.group_id)){
 }}
 	<li class="layim-msgbox-system">
       <p><em>系统：</em>已拒绝&nbsp;&nbsp;&nbsp;{{ uitem.user_nickname }}&nbsp;&nbsp;&nbsp;的群聊申请<span>{{ item.send_date }}</span></p>
@@ -203,16 +203,18 @@ layui.use(['layim', 'flow'], function(){
         ,avatar: user.avatar
         ,group: parent.layui.layim.cache().friend //获取好友分组数据
         ,submit: function(group, index){
-          if(isEmpty(jilu.griup_id)){
+        	if(isEmpty(jilu.griup_id)){
         	  $.ajax({
             	  url: '../Msgbox/agree',
             	  data: {
             		  sender_id: sender_id,
-            		  receiver_id: receiver_id
+            		  receiver_id: receiver_id,
+            		  send_ip: user.last_login_ip,
+            		  group_id_me: group,
+            		  group_id_you: jilu.sender_friendgroup_id
             	  },
             	  dataType: 'json',
             	  success: function(res){
-            		  
             		  if(res != 1){
                           return layer.msg(res.msg);
                       }
