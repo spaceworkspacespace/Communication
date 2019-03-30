@@ -163,7 +163,7 @@ class IndexController extends HomeBaseController
                 case 'group':
                     $data['uid'] = cmf_get_current_user_id();
                     $str['mine']['type'] = $str['to']['type'];
-                    $str['mine']['mine'] = true;
+                    $str['mine']['mine'] = false;
                     $str['mine']['id'] = $id;
                     $data['data'][] = $str['mine'];
                     $this->friendchat($id,$str['mine']['content'],'group');

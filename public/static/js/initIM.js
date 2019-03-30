@@ -86,7 +86,7 @@ var initIM = (function ($, _) {
 			client.onxmessage = function (data) {
 				console.log(data);
 				for (var i = 0; i < data.data.length; i++) {
-					var id = document.getElementById('userId').value;
+					var $id = {:cmf_get_current_user_id()};
 					if (id != data.uid) {
 						layim.getMessage({
 							username: data.data[i].username
