@@ -82,12 +82,12 @@ var initIM = (function ($, _) {
 
 			});
 
+			// var $id = {:cmf_get_current_user_id()};
 			// 聊天消息
 			client.onxmessage = function (data) {
 				console.log(data);
 				for (var i = 0; i < data.data.length; i++) {
-					var $id = {:cmf_get_current_user_id()};
-					if (id != data.uid) {
+					if (client.userId != data.uid) {
 						layim.getMessage({
 							username: data.data[i].username
 							, avatar: data.data[i].avatar
@@ -107,7 +107,9 @@ var initIM = (function ($, _) {
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
-					var ks = JSON.parse(atob(data.data));
+					client.userId = data.data.id;
+					var ks = JSON.parse(atob(data.data.ks));
+					console.log(ks);
 					client.setKeys(ks);
 				}, 'json');
 			}

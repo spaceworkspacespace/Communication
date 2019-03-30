@@ -5,6 +5,14 @@ interface IIMService {
     const SQL_DATE_FORMAT = "Y-m-d H:i:s";
     
     /**
+     * 创建一个分组
+     * @param mixed $userId 用户 id
+     * @param string $groupName 分组名称
+     * @return \think\Collection 插入的分组信息
+     */
+    public function createFriendGroup($userId, $groupName): array;
+    
+    /**
      * 通过用户 id 获取用户基本信息等. 为 layerIM 适配的初始化数据.
      * @param mixed $userId
      */

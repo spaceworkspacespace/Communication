@@ -17,6 +17,11 @@ return [
     "gateway" => [
         "remote" => "192.168.0.80:1238",
         "remote_log_uid" => "socket_log"
+    ],
+    // 程序的一些配置.
+    "im" => [
+        // 加密 key 保存的名称
+        "keys_name" => "im_keys"
     ]
 //     ,
 //     "cache"=>[

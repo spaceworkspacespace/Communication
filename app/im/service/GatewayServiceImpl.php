@@ -27,6 +27,19 @@ class GatewayServiceImpl implements IGatewayService
     // public function update(array $config) {
     // $this->config = array_merge($this->config, $config);
     // }
+    
+    public static function addToUid($uid, $data): void {
+        $data = [
+            "id"=>"u-$uid",
+            "payload"=> [
+                "type"=>self::ADD_TYPE,
+                "data"=>$data
+            ]
+        ];
+        Hook::listen("gateway_send", $data);
+        Gateway::sendToUid($uid, $data);
+    }
+    
     public static function msgToClient($clientId, $data): void
     {
         $uid = Gateway::getUidByClientId($clientId);

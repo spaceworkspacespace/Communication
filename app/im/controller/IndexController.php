@@ -108,33 +108,32 @@ class IndexController extends HomeBaseController
     }
 	
 	public function getgroup(){
-	    $data=[];
-        $data['code'] = 0;
-        $data['msg'] = '';
         $groupId = $this->request->get('id');
-        $group = new GroupModel();
-        $owner = $group->alias('g')->where(['g.id'=>$groupId])->join('user_entire u','u.id = g.creator_id')->select()->toArray();
-        $groups = new GroupsModel();
-        $list = $groups->alias('g')->where(['g.contact_id'=>$groupId])->join('user_entire u','u.id = g.user_id')->select()->toArray();
-        $data['data'] = array(
-            "owner" => array_map(function ($item) {
-                $friends = array_index_pick($item, "user_nickname", "id", "avatar", "sign");
-                array_key_replace($friends, [
-                    "user_nickname" => "username"
-                ]);
-                return $friends;
-            }, $owner)[0],
-            'menbers'=>count($list),
-            'list'=>array_map(function ($item) {
-                $friends = array_index_pick($item, "user_nickname", "id", "avatar", "sign");
-                array_key_replace($friends, [
-                    "user_nickname" => "username"
-                ]);
-                return $friends;
-            }, $list),
-        );
         
-        return json_encode($data);
+        $group = new GroupModel();
+        $owner = $group->alias('g')
+            ->field("u.id, CASE u.avatar  WHEN '' THEN 'https://i.loli.net/2018/12/10/5c0de4003a282.png' END AS avatar, u.signature AS sign, u.user_nickname AS username")
+            ->where(['g.id'=>$groupId])
+            ->join(["cmf_user"=> "u"],'u.id = g.creator_id')
+            ->limit(0, 1)
+            ->select()
+            ->toArray();
+        
+        $groups = new GroupsModel();
+        $list = $groups->alias('g')
+            ->field("u.id,  CASE u.avatar  WHEN '' THEN 'https://i.loli.net/2018/12/10/5c0de4003a282.png' END AS avatar, u.signature AS sign, u.user_nickname AS username")
+            ->where(['g.contact_id'=>$groupId])
+            ->join(["cmf_user"=> "u"],'u.id = g.user_id')
+            ->select()
+            ->toArray();
+        
+        $data = [
+            "owner" =>$owner[0],
+            'menbers'=>count($list),
+            'list'=>$list,
+        ];
+        
+        $this->error("", "/", $data, 0);
     }
 	
 	/**
@@ -215,7 +214,10 @@ class IndexController extends HomeBaseController
             $keys["g-$groupId"] = $security->getGroupKey($groupId);
         }
         // 返回给用户持有的密钥
-        $this->error("", "/", base64_encode(json_encode($keys)), 0);
+        $this->error("", "/", [
+            "id"=>cmf_get_current_user_id(),
+            "ks"=>base64_encode(json_encode($keys))
+        ], 0);
     }
     
     public function contacts() {

@@ -4,29 +4,23 @@ namespace app\im\service;
 use app\im\util\RSAUtils;
 use think\Hook;
 use app\im\util\AutoSerial;
+use app\im\model\RedisModel;
 
 /**
  * 管理所有密码以及进行加密解密的便利方法.
  * @author silence
  *
  */
-class SecurityService extends AutoSerial
+class SecurityService  
 {
-
-    // 储存所有密码
-    private $keys = [
-        "user" => [], // 存放用户 key
-        "group" => [] // 存放群组 key
-    ];
-
-    private $lastUpdateTime = null;
-
-    private $config = [
-        "expiration" => 3000 // 密钥的有效期, 秒, 到期会更新密钥.
-    ];
+    private static $instance;
+    
+    private  $redis;
 
     protected function __construct()
-    {}
+    {
+        $this->redis = RedisModel::getRedis();
+    }
 
     /**
      * 获取单例对象
@@ -36,9 +30,9 @@ class SecurityService extends AutoSerial
      */
     public static function getInstance($config = [])
     {
-        $obj = parent::getInstance();
+        if (!static::$instance) static::$instance = new static();
 //         $obj->configuration($config);
-        return $obj;
+        return static::$instance;
     }
 
     /**
@@ -49,18 +43,30 @@ class SecurityService extends AutoSerial
      */
     public function getUserKey($userId)
     {
-        if (isset($this->keys["user"][$userId]))
-            return $this->keys["user"][$userId];
-        else 
-            return $this->keys["user"][$userId] = "user-$userId-im-".time();
+        $key = "user-$userId";
+        if($value = $this->redis->rawCommand("HGET", config("im.keys_name"), $key)) {
+            return $value;
+        } else {
+            $value = "user-$userId-im-".time();
+            $this->redis->rawCommand("HSET", config("im.keys_name"), $key, $value);
+            return $value;
+        }
     }
 
     public function getGroupKey($groupId)
     {
-        if (isset($this->keys["group"][$groupId]))
-            return $this->keys["group"][$groupId];
-        else 
-            return $this->keys["group"][$groupId] = "group-$groupId-im-".time();
+        $key = "group-$groupId";
+//         im_log("debug", "HGET ".config("im.keys_name")." $key");
+        
+        if($value = $this->redis->rawCommand("HGET", config("im.keys_name"), $key)) {
+            return $value;
+        } else {
+            $value = "group-$groupId-im-".time();
+//             im_log("debug", "HSET ".config("im.keys_name")." $key \"$value\"");
+            $this->redis->rawCommand("HSET", config("im.keys_name"), $key, $value);
+//             im_log("debug", $result);
+            return $value;
+        }
     }
 
     /**
@@ -71,7 +77,8 @@ class SecurityService extends AutoSerial
      */
     public function setUserKey($userId, $key)
     {
-        $this->keys["user"][$userId] = $key;
+        $field = "user-$userId";
+        $this->redis->rawCommand("HSET", config("im.keys_name"), $field, $key);
     }
 
     /**
@@ -82,7 +89,8 @@ class SecurityService extends AutoSerial
      */
     public function setGroupKey($groupId, $key)
     {
-        $this->keys["group"][$groupId] = $key;
+        $field = "group-$groupId";
+        $this->redis->rawCommand("HSET", config("im.keys_name"), $field, $key);
     }
 
     /**

@@ -6,8 +6,16 @@ interface IGatewayService {
     public const MESSAGE_TYPE = "SEND";
     public const ASK_TYPE = "ASK";
     public const UPDATE_TYPE = "UPDATE";
+    public const ADD_TYPE = "ADD";
     
     public static function updateToUid($uid, $data): void;
+    
+    /**
+     * 对客户端发送添加 好友/群聊 的命令
+     * @param mixed $uid
+     * @param mixed $data
+     */
+    public static function addToUid($uid, $data): void;
     
     public static function askToUid($uid, $data): void ;
     
@@ -33,5 +41,6 @@ interface IGatewayService {
      * @param mixed $data
      */
     public static function msgToGroup($group, $message): void;
+    
     
 }

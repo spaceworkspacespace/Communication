@@ -25,8 +25,40 @@ class IMServiceImpl implements IIMService
         return static::$instance;
     }
     
+    public function createFriendGroup($userId, $groupName): array {
+        try {
+            $friendGroup = model("friend_groups")->getQuery();
+            $date = date(static::SQL_DATE_FORMAT, time());
+            // 得到分组优先级
+            $priority = $friendGroup->where("user_id=:id")
+            ->bind(["id"=> [$userId, \PDO::PARAM_INT]])
+            ->max("priority");
+            // 确定新分组的优先级
+            if (is_numeric($priority)) $priority+=10;
+            else $priority = 10;
+            
+            $data = [
+                "user_id"=> $userId,
+                "group_name"=> $groupName,
+                "priority"=>$priority,
+                "create_time"=>$date,
+                "member_count"=>0
+            ];
+            // 新建分组
+            $friendGroup  ->insert($data, false, true);
+            return $data;
+        } catch(OperationFailureException $e) {
+            throw $e;
+        } catch(\Exception $e) {
+            im_log("error", "新建分组失败! 用户: $userId, 分组名称: $groupName", $e);
+            throw new OperationFailureException("新建分组失败, 请稍后重试~");
+        }
+    }
+    
     public function init($userId)
     {
+        $friend = $this->findOwnFriends($userId);
+        if (!count($friend)) $this->createFriendGroup($userId, "我的好友"); 
         return [
             "mine"=>[],
             "friend" => $this->findOwnFriends($userId),
@@ -219,7 +251,23 @@ class IMServiceImpl implements IIMService
             
         $dateStr = date(self::SQL_DATE_FORMAT);
         $query = model("msg_box")->getQuery();
+        $friendGroup = model("friend_groups")->getQuery();
         try {
+            // 检查分组 id 是否有效
+            if (!$friendGroup->where([
+                    "id"=>$friendGroupId,
+                    "user_id"=>$sender
+                ])
+                ->cout()) {
+                    // 分组 id 无效, 查找默认分组
+                    $friendGroupId = $friendGroup->field("id")
+                        ->where("user_id=:id")
+                        ->bind(["id"=>[$sender, \PDO::PARAM_INT]])
+                        ->order("priority", "asc")
+                        ->select()
+                        ->column("id");
+                }
+
             $data = [
                 "sender_id"=>$sender,
                 "sender_friendgroup_id"=>$friendGroupId,
