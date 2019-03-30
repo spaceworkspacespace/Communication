@@ -104,19 +104,22 @@ class GatewayImpl implements IGateway, IIM {
 
         this._socket.onmessage = (event: MessageEvent) => {
             try {
+                // console.log(event.data)
                 if (!event.data) return;
 
                 let frame: any = JSON.parse(event.data);
+                // console.log(frame, keys[this._id]);
                 let msg: GatewayMessage.MessagePayload;
                 // 判断是否为加密数据
                 if (typeof frame.payload !== "string") { // 不是加密数据, 没有加密负载.
                     msg = frame as GatewayMessage.MessagePayload;
                 } else { // 是加密数据, 进行解密操作
                     let key = keys[this._id][frame.id];
-                    // console.log(keys, key);
+                    // console.log(keys, key, frame.payload);
                     if (!key) return;
                     msg = JSON.parse(this.decrypt(frame.payload, keys[this._id][frame.id])) as GatewayMessage.MessagePayload;
                 }
+                // console.log(msg)
                 // 根据不同的消息类型分别处理.
                 switch (msg.type) {
                     case GatewayMessage.SEND:
@@ -147,7 +150,8 @@ class GatewayImpl implements IGateway, IIM {
             return this.onopen && this.onopen(event);
         }
         this._socket.onclose = (event: CloseEvent) => {
-            return this.onclose && this.onclose(event);
+            // return this.onclose && this.onclose(event);
+            this._socket = new WebSocket(this._url);
         }
         this._socket.onerror = function (event) {
             return this.onerror && this.onerror(event);

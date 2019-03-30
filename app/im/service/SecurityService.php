@@ -101,7 +101,7 @@ class SecurityService extends AutoSerial
     }
     
     public function encryptWithGroupId($text, $groupId): string {
-        return $this->decrypt($text, $this->getGroupKey($groupId));
+        return $this->encrypt($text, $this->getGroupKey($groupId));
     }
 
     public function decrypt($text, $key): string

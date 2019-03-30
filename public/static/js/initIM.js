@@ -84,6 +84,7 @@ var initIM = (function ($, _) {
 
 			// 聊天消息
 			client.onxmessage = function (data) {
+				console.log(data);
 				for (var i = 0; i < data.data.length; i++) {
 					var id = document.getElementById('userId').value;
 					if (id != data.uid) {

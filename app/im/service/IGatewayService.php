@@ -3,7 +3,7 @@ namespace app\im\service;
 
 
 interface IGatewayService {
-    public const MESSAGE_TYPE = "MESSAGE";
+    public const MESSAGE_TYPE = "SEND";
     public const ASK_TYPE = "ASK";
     public const UPDATE_TYPE = "UPDATE";
     
@@ -20,8 +20,18 @@ interface IGatewayService {
      */
     public static function msgToUid($uid, $data): void;
     
+    /**
+     * 发送消息盒子提醒到客户端
+     * @param mixed $clientId
+     * @param mixed $data
+     */
     public static function msgToClient($clientId, $data): void;
     
+    /**
+     * 发送消息到群聊
+     * @param mixed $uid
+     * @param mixed $data
+     */
     public static function msgToGroup($group, $message): void;
     
 }

@@ -25,8 +25,16 @@ class TestController extends Controller {
     
     public function getDecrypt() {
         $security = SecurityService::getInstance();
-        $text = "fiN7s+ftMGRePqx+uOAeP1EVv6jHKhYBDwz8M9DfOa/jn4kgxnOz3UAvsR45DRSIkZh+BxB2mBtdrL+FPURJgb6TvG4F8ekdGoMCeswcgTNdD6qbuiFoug3p/oq+FSxDwPdN9k/k4hejuBZHb+xJFIqLN6wIzshJu1U5nVB6MwWDUbHSSX5scrQhmYO9rfnB0zlkOWkg86YPBezXg8NZ/N7YCaPaMf8nL9C5WIPLBEoZfrtQUnVaCLJxYilIIepFVw==";
-        var_dump($security->decryptWithUserId($text, 1));
+//         $text = "fiN7s+ftMGRePqx+uOAeP1EVv6jHKhYBDwz8M9DfOa/jn4kgxnOz3UAvsR45DRSIkZh+BxB2mBtdrL+FPURJgb6TvG4F8ekdGoMCeswcgTNdD6qbuiFoug3p/oq+FSxDwPdN9k/k4hejuBZHb+xJFIqLN6wIzshJu1U5nVB6MwWDUbHSSX5scrQhmYO9rfnB0zlkOWkg86YPBezXg8NZ/N7YCaPaMf8nL9C5WIPLBEoZfrtQUnVaCLJxYilIIepFVw==";
+//         var_dump($security->decryptWithUserId($text, 1));
+        $text = '{"type":"MESSAGE","data":"{\"type\":\"chatMessage\",\"uid\":2,\"data\":[{\"username\":\"user\",\"avatar\":\"\",\"id\":\"21\",\"mine\":true,\"content\":\"321\",\"type\":\"group\"}]}"}';
+        $key = "group-21-im-1553910450";
+        $encrypt = $security->encrypt($text, $security->getGroupKey(21));
+        $encryptGroupId = $security->encryptWithGroupId($text,  21);
+        var_dump($encrypt);
+        var_dump($encryptGroupId);
+        $decrypt = $security->decrypt($encrypt, $key);
+        var_dump($decrypt);
     }
     
     public function getIndex() {

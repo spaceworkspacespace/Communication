@@ -97,8 +97,18 @@ class IndexController extends HomeBaseController
         // im 前端框架要求返回 0 为成功, success 方法返回的是 1.
         $this->error("", "/", $info, 0);
     }
+    
+    /**
+     * 初始化完成. 表示客户端已准备就绪.
+     * 初始化接口请求顺序:
+     *  init -> bind -> finish
+     */
+    public function finish() {
+        
+    }
 	
 	public function getgroup(){
+	    $data=[];
         $data['code'] = 0;
         $data['msg'] = '';
         $groupId = $this->request->get('id');
@@ -131,6 +141,7 @@ class IndexController extends HomeBaseController
      * 发送消息
      */
     public function send($str){
+        $data=[];
         $data['type'] = 'chatMessage';
         $id = $str['to']['id'];
         if(isset($id)){
@@ -141,7 +152,7 @@ class IndexController extends HomeBaseController
                     $data['data'][] = $str['mine'];
                     $this->friendchat($id,$str['mine']['content'],'friend');
                     if(Gateway::isUidOnline($id)){
-                        GatewayServiceImpl::msgToUid($id, json_encode($data));
+                        GatewayServiceImpl::msgToUid($id, $data);
                         //聊天记录储存
                         $data = json_encode(['code'=>1,'id'=>$id]);
                     }else{
@@ -156,7 +167,7 @@ class IndexController extends HomeBaseController
                     $str['mine']['id'] = $id;
                     $data['data'][] = $str['mine'];
                     $this->friendchat($id,$str['mine']['content'],'group');
-                    GatewayServiceImpl::msgToGroup($id, json_encode($data));
+                    GatewayServiceImpl::msgToGroup($id, $data);
                     //聊天记录储存
                     $data = json_encode(['code'=>1,'type'=>'group','id'=>$id]);
                 break;
@@ -199,8 +210,9 @@ class IndexController extends HomeBaseController
         $keys["u-$uid"] = $keys["default"];
         
         foreach ($group as $key){
-            Gateway::joinGroup($client_id,$key['contact_id']);
-            array_push($keys, $security->getGroupKey($key['contact_id']));
+            $groupId = $key['contact_id'];
+            Gateway::joinGroup($client_id,$groupId);
+            $keys["g-$groupId"] = $security->getGroupKey($groupId);
         }
         // 返回给用户持有的密钥
         $this->error("", "/", base64_encode(json_encode($keys)), 0);

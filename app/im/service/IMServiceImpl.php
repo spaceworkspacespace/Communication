@@ -398,5 +398,9 @@ class IMServiceImpl implements IIMService
             throw new OperationFailureException("查询失败, 请稍后重试~");
         }
     }
-
+    
+    public function pushAll($uid): bool
+    {
+        
+    }
 }
