@@ -4,6 +4,7 @@ use GatewayClient\Gateway;
 use think\cache\driver\Redis;
 use think\Config;
 use think\Controller;
+use think\Db;
 use cmf\controller\HomeBaseController;
 use think\Cache;
 use think\Hook;
@@ -19,11 +20,15 @@ class TestController extends Controller {
     {
         phpinfo();
     }
-    
+    public function getDb() {
+        var_dump(Db::connect(config("database")) === Db::connect(config("database")));
+    }
     public function getSql() {
         var_dump(IMServiceImpl::getInstance()->readChatUser(cmf_get_current_user_id(), 2, 0, 100));
     }
-    
+    public function getUser() {
+        var_dump(model("user")->getUserById(1, 2, 3)->toArray());
+    }
     public function getRedis() {
         $redis = RedisModel::getRedis();
         var_dump($redis->rawCommand("set", "im_124", "321"));

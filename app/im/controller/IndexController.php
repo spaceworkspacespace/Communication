@@ -136,63 +136,6 @@ class IndexController extends HomeBaseController
         $this->error("", "/", $data, 0);
     }
 	
-	/**
-     * 发送消息
-     */
-    public function send($str){
-        $data=[];
-        $data['type'] = 'chatMessage';
-        $id = $str['to']['id'];
-        if(isset($id)){
-            switch ($str['to']['type']){
-                case 'friend':
-                    $str['mine']['type'] = $str['to']['type'];
-                    $str['mine']['mine'] = false;
-                    $data['data'][] = $str['mine'];
-                    $this->friendchat($id,$str['mine']['content'],'friend');
-                    if(Gateway::isUidOnline($id)){
-                        GatewayServiceImpl::msgToUid($id, $data);
-                        //聊天记录储存
-                        $data = json_encode(['code'=>1,'id'=>$id]);
-                    }else{
-                        //聊天记录储存
-                        $data = json_encode(['code'=>0,'type'=>'friend','id'=>$id]);
-                    }
-                break;
-                case 'group':
-                    $data['uid'] = cmf_get_current_user_id();
-                    $str['mine']['type'] = $str['to']['type'];
-                    $str['mine']['mine'] = false;
-                    $str['mine']['id'] = $id;
-                    $data['data'][] = $str['mine'];
-                    $this->friendchat($id,$str['mine']['content'],'group');
-                    GatewayServiceImpl::msgToGroup($id, $data);
-                    //聊天记录储存
-                    $data = json_encode(['code'=>1,'type'=>'group','id'=>$id]);
-                break;
-                default:
-                break;
-            }
-            return $data;
-        }
-    }
-	//保存好友聊天记录
-    public function friendchat($id,$str,$type){
-        $arr['send_ip'] = get_client_ip(0, true);
-        $arr['sender_id'] = cmf_get_current_user_id();
-        $arr['send_date'] = date('Y-m-d H:i:s');
-        $arr['content'] = $str;
-        if($type == 'group'){
-            $arr['group_id'] = $id;
-            $chat = new ChatGroupModel();
-        }else if($type == 'friend'){
-            $arr['receiver_id'] =$id;
-            $chat = new ChatUserModel();
-        }
-        $chat->save($arr);
-    }
-    
-    
     /**
      * 绑定 gatewayworker 客户端 id 和 uid, 并响应公钥.
      * @param mixed $client_id

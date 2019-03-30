@@ -13,6 +13,8 @@ use app\im\model\RedisModel;
  */
 class SecurityService  
 {
+    // 用在 redis hash 中的 key.
+    public const KEY_NAME = "im_keys";
     private static $instance;
     
     private  $redis;
@@ -44,11 +46,12 @@ class SecurityService
     public function getUserKey($userId)
     {
         $key = "user-$userId";
-        if($value = $this->redis->rawCommand("HGET", config("im.keys_name"), $key)) {
+//         im_log("debug", $key, ", ", config("im.keys_name"));
+        if($value = $this->redis->rawCommand("HGET", static::KEY_NAME, $key)) {
             return $value;
         } else {
             $value = "user-$userId-im-".time();
-            $this->redis->rawCommand("HSET", config("im.keys_name"), $key, $value);
+            $this->redis->rawCommand("HSET", static::KEY_NAME, $key, $value);
             return $value;
         }
     }
@@ -58,12 +61,12 @@ class SecurityService
         $key = "group-$groupId";
 //         im_log("debug", "HGET ".config("im.keys_name")." $key");
         
-        if($value = $this->redis->rawCommand("HGET", config("im.keys_name"), $key)) {
+        if($value = $this->redis->rawCommand("HGET", static::KEY_NAME, $key)) {
             return $value;
         } else {
             $value = "group-$groupId-im-".time();
 //             im_log("debug", "HSET ".config("im.keys_name")." $key \"$value\"");
-            $this->redis->rawCommand("HSET", config("im.keys_name"), $key, $value);
+            $this->redis->rawCommand("HSET", static::KEY_NAME, $key, $value);
 //             im_log("debug", $result);
             return $value;
         }
@@ -78,7 +81,7 @@ class SecurityService
     public function setUserKey($userId, $key)
     {
         $field = "user-$userId";
-        $this->redis->rawCommand("HSET", config("im.keys_name"), $field, $key);
+        $this->redis->rawCommand("HSET", static::KEY_NAME, $field, $key);
     }
 
     /**
@@ -90,7 +93,7 @@ class SecurityService
     public function setGroupKey($groupId, $key)
     {
         $field = "group-$groupId";
-        $this->redis->rawCommand("HSET", config("im.keys_name"), $field, $key);
+        $this->redis->rawCommand("HSET", static::KEY_NAME, $field, $key);
     }
 
     /**

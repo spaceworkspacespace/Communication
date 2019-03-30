@@ -20,8 +20,6 @@ return [
     ],
     // 程序的一些配置.
     "im" => [
-        // 加密 key 保存的名称
-        "keys_name" => "im_keys"
     ]
 //     ,
 //     "cache"=>[
