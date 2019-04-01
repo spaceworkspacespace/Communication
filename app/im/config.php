@@ -11,12 +11,12 @@ return [
         'level' => [],
         "type" => "\\app\\im\\util\\SocketLogDriverImpl",
         "remote" => "192.168.0.80:1238",
-        "remote_log_uid" => "socket_log"
+        "remote_log_uid" => "socket_log14"
     ],
     // gateway 设置
     "gateway" => [
         "remote" => "192.168.0.80:1238",
-        "remote_log_uid" => "socket_log"
+        "remote_log_uid" => "socket_log14"
     ],
     // 程序的一些配置.
     "im" => [

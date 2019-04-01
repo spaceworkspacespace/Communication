@@ -31,7 +31,7 @@ class FriendsModel extends IMModel {
                 ];
             }
             // 加入好友信息
-            if (!isset($res["id"]) && !is_null($res["id"])) {
+            if (isset($res["id"]) && !is_null($res["id"])) {
                 array_push($friends[$res["groupid"]]["list"], $res);
             }
         }

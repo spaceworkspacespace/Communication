@@ -26,9 +26,9 @@ class InitBehavior {
             $_SERVER["CONTENT_TYPE"]: "text/plain";
         $contentType = trim(explode(";", $contentType)[0]);
 
-        if ($encrypted) {
 //             var_dump($encrypted);
 //             var_dump($contentType);  
+        if ($encrypted) {
             // 判断 session 获取用户 id.
             session_start();
             if (!isset($_SESSION["think"]["user"])) return; 
@@ -59,7 +59,7 @@ class InitBehavior {
                     break;
             }
             // 转换成功, 赋值给 $_POST
-            // var_dump($post);
+//             var_dump($post);
             if (is_array($post)) {
                 foreach ($post as $k => $v) {
                     $_POST[$k]=$v;

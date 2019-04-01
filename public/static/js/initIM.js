@@ -57,6 +57,10 @@ var initIM = (function ($, _) {
 				copyright: true,
 			});
 
+			client.onxadd = function(data) {
+				
+			}
+
 			// 监听发送消息
 			layim.on('sendMessage', function (data) {
 				$.post('send', { str: data }, function (data) {
