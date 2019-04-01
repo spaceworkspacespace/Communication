@@ -51,7 +51,7 @@ class ChatController extends Controller{
         $pageNo = isset($_GET["no"])? $_GET["no"]: 0;
         $pageSize = isset($_GET["size"])? $_GET["size"]: 100;
         try {
-            if (trim($type) !== "friend ") {
+            if (trim($type) != "friend") {
                 $data = [
                     "id"=> $this->userId,
                     "records"=>$this->service->readChatGroup($id, $pageNo, $pageSize)->toArray(),
@@ -69,8 +69,15 @@ class ChatController extends Controller{
         $this->success($msg, "/", $data, 0);
     }
     
+    /**
+     * 发送聊天信息
+     * @param  mixed $id 发送者 id
+     * @param mixed $type 消息类型
+     * @param string $content 消息内容
+     */
     public function postMessage($id, $type, $content){
         $msg = "";
+        // im_log("debug", "新的消息 $id $type $content");
         try {
             switch(trim($type)) {
                 case "friend":
@@ -85,6 +92,52 @@ class ChatController extends Controller{
             $this->success($msg, "/", null, 0);
         }
     }
+    
+    /**
+     * 聊天图片, 群组和用户的.
+     * @param mixed $file
+     */
+    public function postMessagePicture()
+    {
+        $file = $this->request->file("file");
+        if (! $file) {
+            $this->success("未选择任何文件.", "/", null, 0);
+            return;
+        }
+        $folder = implode([ROOT_PATH,"public", DIRECTORY_SEPARATOR, "upload" ]);
+        $info = $file->validate([ 'ext' => 'jpg,png,gif'])->rule("md5") ->move($folder);
+        if (! $info) {
+            $this->success($file->getError(), "/", null, 0);
+            return;
+        }
+        $url = implode(["/upload/",$info->getSaveName() ]);
+        $this->error("", "/", ["src"=> $url], 0);
+    }
+    
+    /**
+     * 聊天文件, 群组和用户的.
+     * @param mixed $file
+     */
+    public function postMessageFile()
+    {
+        $file = $this->request->file("file");
+//         im_log("debug", $file->getInfo()["name"]);
+        if (! $file) {
+            $this->success("未选择任何文件.", "/", null, 0);
+            return;
+        }
+        $folder = implode([ROOT_PATH,"public", DIRECTORY_SEPARATOR, "upload" ]);
+        $info = $file->rule("md5") ->move($folder);
+        if (! $info) {
+            $this->success($file->getError(), "/", null, 0);
+            return;
+        }
+        $url = implode(["/upload/",$info->getSaveName() ]);
+        $fileName = isset($file->getInfo()["name"])?
+            $file->getInfo()["name"]:$info->getSaveName();
+        $this->error("", "/", ["src"=>$url, "name"=>$fileName], 0);
+    }
+    
     
     /*
     public function sendMessage($id, $type, $content){

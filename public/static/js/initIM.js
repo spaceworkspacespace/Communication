@@ -40,17 +40,13 @@ var initIM = (function ($, _) {
 				members: {
 					url: urls.members
 				},
-				uploadImage: {
-					url: urls.uploadImage
-				},
-				uploadFile: {
-					url: urls.uploadFile
-				},
-				tool: [{
-					alias: 'code',
-					title: '代码',
-					icon: '&#xe64e;'
-				}],
+				uploadImage: { url: urls.uploadImage },
+				uploadFile: { url: urls.uploadFile },
+				// tool: [{
+				// 	alias: 'code',
+				// 	title: '代码',
+				// 	icon: '&#xe64e;'
+				// }],
 				msgbox: urls.msgbox,
 				find: urls.find,
 				chatLog: urls.chatLog,
@@ -64,7 +60,7 @@ var initIM = (function ($, _) {
 			// 监听发送消息
 			layim.on('sendMessage', function (data) {
 				// console.log(data)
-				$.post('/chat/message', 
+				$.post('/im/chat/message', 
 					{ id: data.to.id, type: data.to.type, content: data.mine.content }, 
 					function (data) { if (data.code) layer.msg(data.msg);}, 'json');
 					// 如果对方离线
@@ -100,25 +96,18 @@ var initIM = (function ($, _) {
 					error: function(xhr, status) {
 						layer.msg("网络错误 ! 请重试.");
 					}
-				}) 
+				});
 			});
 
 			// var $id = {:cmf_get_current_user_id()};
 			// 聊天消息
 			client.onxmessage = function (data) {
 				console.log(data);
-				for (var i = 0; i < data.data.length; i++) {
-					if (client.userId != data.uid) {
-						layim.getMessage({
-							username: data.data[i].username
-							, avatar: data.data[i].avatar
-							, id: data.data[i].id
-							, type: data.data[i].type
-							, content: data.data[i].content
-							, timestamp: new Date().getTime()
-							, system: data.data[i].mine
-						});
-					}
+				var msgLen = data.length;
+				for (var i=0; i<msgLen; i++) {
+					if (client.userId == data[i].fromid) continue;
+					// data[i].avatar || (data[i].avatar = "https://i.loli.net/2018/12/10/5c0de4003a282.png");
+					layim.getMessage(data[i]);
 				}
 			}
 

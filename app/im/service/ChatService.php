@@ -11,7 +11,7 @@ interface ChatService {
      * @param string $content
      * @return bool
      */
-    public function sendToUser($fromId, $toId, $content): bool;
+    public function sendToUser($fromId, $toId, $content);
     
     /**
      * 发送聊天信息给群聊
@@ -20,5 +20,5 @@ interface ChatService {
      * @param string $content
      * @return bool
      */
-    public function sendToGroup($fromId, $toId, $content): bool;
+    public function sendToGroup($fromId, $toId, $content);
 }

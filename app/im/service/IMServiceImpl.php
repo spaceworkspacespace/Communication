@@ -75,7 +75,7 @@ class IMServiceImpl implements IIMService, ChatService
         $friend = $this->findOwnFriends($userId);
         if (!count($friend)) $this->createFriendGroup($userId, "我的好友"); 
         return [
-            "mine"=>[],
+            "mine"=>$this->getUserById($userId)[0],
             "friend" => $this->findOwnFriends($userId),
             "group" => $this->findOwnGroups($userId)
         ];
@@ -445,6 +445,7 @@ class IMServiceImpl implements IIMService, ChatService
     {
         if ($pageSize > 500)$pageSize = 100;
         try {
+            im_log("debug", "查找用户聊天信息 Id and $userId");
             $map=[];
             $mapx=[];
             $map['chat.sender_id'] = $Id;
@@ -468,7 +469,7 @@ class IMServiceImpl implements IIMService, ChatService
 //                 ->alias("chat")
 //                 ->field("user.id, avatar, user_nickname AS username, send_date AS date, content")
 //                 ->join(["cmf_user"=> "user"], "chat.sender_id=user.id ")
-//                 ->where("chat.sender_id=:id AND chat.receiver_id=:id2 AND chat.visible_sender=1 OR chat.sender_id=:id2 AND chat.receiver_id=id AND chat.visible_receiver=1")
+//                 ->where("chat.sender_id=:id AND chat.receiver_id=:id2 AND chat.visible_sender=1 OR chat.sender_id=:id2 AND chat.receiver_id=:id AND chat.visible_receiver=1")
 //                 ->bind([
 //                     "id"=>[ $Id, \PDO::PARAM_INT],
 //                     "id2"=>[ $userId, \PDO::PARAM_INT],
@@ -482,7 +483,7 @@ class IMServiceImpl implements IIMService, ChatService
         }
     }
     
-    public function sendToGroup($fromId, $toId, $content, $ip=null): bool
+    public function sendToGroup($fromId, $toId, $content, $ip=null)
     {
         $query = static::getQuery();
         try {
@@ -524,6 +525,9 @@ class IMServiceImpl implements IIMService, ChatService
                     "last_reads"=>$msgId
                 ]);
             $query->commit();
+//             im_log("debug", $from);
+//             im_log("debug", $from["username"]);
+            $from =$from [0];
             // 推送到群组
             GatewayServiceImpl::msgToGroup($toId, [[
                 "username"=>$from["username"],
@@ -545,7 +549,7 @@ class IMServiceImpl implements IIMService, ChatService
         }
     }
     
-    public function sendToUser($fromId, $toId, $content, $ip=null): bool
+    public function sendToUser($fromId, $toId, $content, $ip=null)
     {
         $query = static::getQuery();
         try {
@@ -555,8 +559,8 @@ class IMServiceImpl implements IIMService, ChatService
             }
             $user = model("user")->getUserById($fromId, $toId);
             // 数据检查
-            if ($user->count()) {
-                im_log("error", "尝试使用不存在的 id 发送信息. from user $fromId to user $toId: $content.");
+            if (!$user->count()) {
+                im_log("error", "尝试使用不存在的 id 发送信息. from user $fromId to user $toId: $content. resultSet: ", $user);
                 throw new OperationFailureException("用户或分组不存在.");
             }
             // 存入记录
@@ -609,9 +613,9 @@ class IMServiceImpl implements IIMService, ChatService
                     "username"=>$from["username"],
                     "avatar"=>$from["avatar"],
                     "id"=>$fromId,
-                    "type"=>"fromid",
+                    "type"=>"friend",
                     "content"=>$content,
-                    "cid"=>$msgId,
+                    "cid"=>$msgId+0,
                     "mine"=>false,
                     "fromid"=>$fromId,
                     "timestamp"=>$timestamp*1000
