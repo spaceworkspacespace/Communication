@@ -6,7 +6,12 @@ use function Qiniu\json_decode;
 
 class UserModel extends Model
 {
-
+    public function getUserById(...$userId): \think\Collection {
+        return $this->getQuery()
+            ->field("id, avatar, user_nickname AS username, signature AS sign")
+            ->whereIn("id", $userId)
+            ->select();
+    }
     // 一对多关联
     public function msgbox()
     {

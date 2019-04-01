@@ -135,4 +135,12 @@ interface IIMService {
      * @param mixed $userId
      */
     public function readChatUser($Id, $userId, int $pageNo, int $pageSize): \think\Collection;
+    
+    /**
+     * 更新用户信息
+     * @param mixed $userId 用户 id
+     * @param mixed $data 要更新的信息
+     * @return bool
+     */
+    public function updateUser($userId, $data): bool;
 }

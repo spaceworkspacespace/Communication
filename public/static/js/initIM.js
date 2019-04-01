@@ -63,18 +63,21 @@ var initIM = (function ($, _) {
 
 			// 监听发送消息
 			layim.on('sendMessage', function (data) {
-				$.post('send', { str: data }, function (data) {
+				// console.log(data)
+				$.post('/chat/message', 
+					{ id: data.to.id, type: data.to.type, content: data.mine.content }, 
+					function (data) { if (data.code) layer.msg(data.msg);}, 'json');
 					// 如果对方离线
-					if (data.type == 'friend') {
-						if (data.code == 0) {
-							layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
-							layim.setFriendStatus(data.id, 'offline');
-						} else {
-							layim.setChatStatus('<span style="color:green;">在线</span>');
-							layim.setFriendStatus(data.id, 'online');
-						}
-					}
-				}, 'json');
+					// if (data.type == 'friend') {
+					// 	if (data.code == 0) {
+					// 		layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
+					// 		layim.setFriendStatus(data.id, 'offline');
+					// 	} else {
+					// 		layim.setChatStatus('<span style="color:green;">在线</span>');
+					// 		layim.setFriendStatus(data.id, 'online');
+					// 	}
+					// }
+				
 			});
 
 			layim.on("ready", function (res) {
@@ -84,6 +87,20 @@ var initIM = (function ($, _) {
 			//监听查看群员
 			layim.on('members', function (data) {
 
+			});
+
+			layim.on("sign", function(data) { 
+				$.ajax({
+					url: "/im/user/info",
+					method: "POST",
+					data: { sign: data },
+					success: function(data, status, xhr) {
+						layer.msg(data.msg);
+					},
+					error: function(xhr, status) {
+						layer.msg("网络错误 ! 请重试.");
+					}
+				}) 
 			});
 
 			// var $id = {:cmf_get_current_user_id()};
@@ -107,7 +124,12 @@ var initIM = (function ($, _) {
 
 			// 有新的请求信息
 			client.onxask = function (data) { layim.msgbox(data.msgCount); }
-
+			// 有新的添加命令
+			client.onxadd = function(data) {
+				for (var i=data.length-1; i>=0; i--) {
+					layim.addList(data[i]);
+				}
+			}
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
