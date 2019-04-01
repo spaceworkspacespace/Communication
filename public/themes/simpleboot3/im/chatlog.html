@@ -37,7 +37,7 @@
                     <img :src="record.avatar || 'https://i.loli.net/2018/12/10/5c0de4003a282.png'">
                     <cite><i>{{ record.date }}</i>{{ record.username }}</cite>
                 </div>
-                <div class="layim-chat-text">{{ record.content }}</div>
+                <div class="layim-chat-text" v-html="contentRecognize(record.content)"></div>
             </li>
             <li><a @click.prevent="$emit('onxpull')" href="#">点击加载更多</a></li>
         </ul>
@@ -47,14 +47,19 @@
     <script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
     <script src="__STATIC__/libs/vue-2.6.9.js"></script>
     <script type="text/javascript">
-        
-        layui.use(['layim', 'laypage'], function(){
+
+        layui.use(['layim', 'laypage'], function () {
             var layim = layui.layim
-            ,layer = layui.layer
-            ,laytpl = layui.laytpl
-            ,$ = layui.jquery
-            ,laypage = layui.laypage;
+                , layer = layui.layer
+                , laytpl = layui.laytpl
+                , $ = layui.jquery
+                , laypage = layui.laypage;
         });
+
+        var recognizer = [
+            /^(file)\(([^\)]+)\)\[([^\]]+)\]$/,
+            /^(img)\[([^\]]+)\]$/
+        ];
 
         new Vue({
             el: "#app",
@@ -90,17 +95,41 @@
                         error: function (xhr, status) {
                             layer.msg("访问失败, 请稍后重试~");
                         }
-                    })
+                    });
                 },
-                onScroll: function(event) {
+                onScroll: function (event) {
                     console.log(event);
                 }
             },
             components: {
                 "chat-content": {
                     props: ["records", "id"],
-                    template: "#x-chat-content"
-                }
+                    template: "#x-chat-content",
+                    methods: {
+                        // 识别特殊内容
+                        contentRecognize: function (content) {
+                            var match;
+                            for (var i = recognizer.length - 1; i >= 0; i--) {
+                                if (match = recognizer[i].exec(content)) {
+                                    break;
+                                }
+                            }
+                            if (!match) return content;
+                            switch (match[1]) {
+                                case "img":
+                                    if (!match[2]) break;
+                                    return '<img class="layui-layim-photos" src="' + match[2] + '">';
+                                case "file":
+                                    if (!match[2] || !match[3]) break;
+                                    return '<a class="layui-layim-file" href="' + match[2]
+                                        + '" download="" target="_blank"><i class="layui-icon"></i><cite>' + match[3]
+                                        + '</cite></a>';
+                            }
+                            return content;
+                        }
+                    }
+                },
+
             }
         });
     </script>

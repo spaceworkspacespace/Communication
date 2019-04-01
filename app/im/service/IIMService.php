@@ -98,7 +98,7 @@ interface IIMService {
      */
     public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip=null): void;
     
-  
+ 
     /**
      * 加入群聊的请求
      * @param mixed $sender 发送者的 id
@@ -109,33 +109,7 @@ interface IIMService {
      */
     public function linkGroupMsg($sender, $groupId, $content, $ip=null): void;
     
-    /**
-     * 向用户推送所有可推送的信息.
-     * @param mixed $uid 用户 id
-     * @return bool
-     */
-    public function pushAll($uid): bool;
-    
-    /**
-     * 消息盒子提醒.
-     * @param mixed $uid 用户 id
-     * @return bool true 如果有新的消息且推送成功, 否则 false. 
-     */
-    public function pushMsgBoxNotification($uid): bool;
-    
-    /**
-     * 读取群组的聊天记录
-     * @param mixed $groupId
-     */
-    public function readChatGroup($groupId, int $pageNo=0, int $pageSize=100);
-    
-    
-    /**
-     * 读取好友的聊天记录
-     * @param mixed $userId
-     */
-    public function readChatUser($Id, $userId, int $pageNo, int $pageSize): \think\Collection;
-    
+
     /**
      * 更新用户信息
      * @param mixed $userId 用户 id

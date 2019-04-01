@@ -99,7 +99,9 @@ class IndexController extends HomeBaseController
      *  init -> bind -> finish
      */
     public function finish() {
-        
+        $userId = cmf_get_current_user_id();
+//         $this->service->pushMsgBoxNotification($userId);
+        $this->service->pushAll($userId);
     }
 	
 	public function getgroup(){

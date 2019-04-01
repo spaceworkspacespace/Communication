@@ -15,8 +15,9 @@ use GatewayClient\Gateway;
 use think\Db;
 use app\im\model\UserModel;
 use think\db\Connection;
+use think\Collection;
 
-class IMServiceImpl implements IIMService, ChatService
+class IMServiceImpl implements IIMService, IChatService, IPushService
 {
     private static $instance;
     private static  $query;
@@ -172,6 +173,53 @@ class IMServiceImpl implements IIMService, ChatService
             im_log("error", "好友分组查询失败. ", $e);
             throw new OperationFailureException("好友分组查询失败, 请稍后重试~");
         }
+    }
+    
+    public function getUnreadMessage($userId, $contactId, $type, $pageNo=0, $pageSize=100): \think\Collection
+    {
+        $resultSet = null;
+        // 查询好友间未读信息
+        if ($type === self::CHAT_FRIEND) {
+            // 获取最后一条接收到的消息
+//             dump([$userId, $contactId]);
+            $lastMsgId = model("friends")->getLastRead($userId, $contactId);
+            // 获取未读信息
+            $resultSet = static::getQuery()->table("im_chat_user")
+                ->alias("chat")
+                ->field("user.id, avatar, user_nickname AS username, send_date AS date, content, chat.id AS cid, UNIX_TIMESTAMP(chat.send_date) AS send_date")
+                ->join(["cmf_user"=>"user"], "chat.sender_id=user.id", "LEFT OUTER")
+                ->where("chat.id >= :unReadId AND (chat.sender_id=:sender AND chat.receiver_id=:receiver AND chat.visible_sender=1 OR chat.sender_id=:receiver2 AND chat.receiver_id=:sender2 AND chat.visible_receiver=1)")
+                ->bind([
+                    "unReadId"=>[$lastMsgId, \PDO::PARAM_INT],
+                    "sender"=>[$userId, \PDO::PARAM_INT],
+                    "receiver"=>[$contactId, \PDO::PARAM_INT],
+                    "sender2"=>[$userId, \PDO::PARAM_INT],
+                    "receiver2"=>[$contactId, \PDO::PARAM_INT],
+                ])
+                ->order("chat.id", "DESC")
+                ->limit($pageSize*$pageNo, $pageSize)
+                ->select();
+//             dump($resultSet->toArray());
+        }
+        // 查询与群组的未读记录
+        if ($type === self::CHAT_GROUP) {
+            // 获取最后一条接收到的消息
+            $lastMsgId = model("groups")->getLastRead($userId, $contactId);
+            // 获取未读信息
+            $resultSet = static::getQuery()->table("im_chat_group")
+                ->alias("chat")
+                ->field("user.id, user.avatar, user_nickname AS username, content, chat.id AS cid, chat.group_id, UNIX_TIMESTAMP(chat.send_date) AS send_date")
+                ->join(["cmf_user"=>"user"], "chat.sender_id=user.id")
+                ->where("chat.id >= :unReadId AND chat.group_id=:gid")
+                ->bind([
+                    "unReadId"=>[$lastMsgId, \PDO::PARAM_INT],
+                    "gid"=>[$contactId, \PDO::PARAM_INT],
+                ])
+                ->order("chat.id", "DESC")
+                ->limit($pageSize*$pageNo, $pageSize)
+                ->select();
+        }
+        return $resultSet;
     }
 
     public function getUserById($userId): array
@@ -401,6 +449,12 @@ class IMServiceImpl implements IIMService, ChatService
         }
     }
     
+    public function pushAll($uid): bool
+    {
+        $this->pushMsgBoxNotification($uid);
+        $this->pushUnreadMessage($uid);
+        return true;
+    }
     
     
     public function pushMsgBoxNotification($uid): bool
@@ -418,6 +472,66 @@ class IMServiceImpl implements IIMService, ChatService
             im_log("error", "消息盒子检查失败 ! id: $uid", $e);
         }
         return false;
+    }
+
+    
+    public function pushUnreadMessage($uid,$contactId=null, $type=IChatService::CHAT_FRIEND): bool
+    {
+        $friend = $group = null;
+        if ($contactId) {
+            $friend = $this->getUnreadMessage($uid, $contactId, static::CHAT_FRIEND)->toArray();
+            $group = $this->getUnreadMessage($uid, $contactId, static::CHAT_GROUP)->toArray();
+        } else {
+            // 循环执行 sql, 之后再改吧.
+            // 获取所有好友和分组
+            $friends = model("friends")->getFriends($uid)->toArray();
+            $groups = model("groups")->getGroups($uid)->toArray();
+            // 查询所有未读消息
+            $friend = [];
+//             var_dump($friends);
+            foreach ($friends as $item) {
+//                 var_dump([$uid, $item["contact_id"]]);
+                $result = $this->getUnreadMessage($uid, $item["contact_id"], static::CHAT_FRIEND)->toArray();
+                $friend = array_merge($friend, $result);
+            }
+            $group=[];
+            foreach ($groups as $item) {
+                $result = $this->getUnreadMessage($uid, $item["contact_id"], static::CHAT_GROUP)->toArray();
+                $group = array_merge($group, $result);
+            }
+        }
+        // 执行推送
+        $group = array_map(function($item) {
+            return [
+                "username"=>$item["username"],
+                "avatar"=>$item["avatar"],
+                "id"=>$item["group_id"],
+                "type"=>"group",
+                "content"=>$item["content"],
+                "cid"=>$item["cid"],
+                "mine"=>false,
+                "fromid"=>$item["id"],
+                "timestamp"=>$item["send_date"]*1000,
+                "require"=> true // 表示前端强制添加此消息, 用于和自己发送的消息相区分
+            ];
+        }, $group);
+        $friend = array_map(function($item) {
+            return [
+                "username"=>$item["username"],
+                "avatar"=>$item["avatar"],
+                "id"=>$item["id"],
+                "type"=>"friend",
+                "content"=>$item["content"],
+                "cid"=>$item["cid"],
+                "mine"=>false,
+                "fromid"=>$item["id"],
+                "timestamp"=>$item["send_date"]*1000,
+                "require"=> true
+            ];
+        }, $friend);
+        GatewayServiceImpl::msgToGroup($uid, $group);
+        GatewayServiceImpl::msgToUid($uid, $friend);
+        return true;
     }
     
     public function readChatGroup($groupId, int $pageNo=0, int $pageSize=100)
@@ -629,10 +743,7 @@ class IMServiceImpl implements IIMService, ChatService
         }
     }
     
-    public function pushAll($uid): bool
-    {
-        
-    }
+
     
     public function updateUser($userId, $data): bool {
         try {
@@ -649,6 +760,5 @@ class IMServiceImpl implements IIMService, ChatService
             return false;
         }
     }
-   
-
+    
 }

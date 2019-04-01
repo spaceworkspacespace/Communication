@@ -24,7 +24,11 @@ class TestController extends Controller {
         var_dump(Db::connect(config("database")) === Db::connect(config("database")));
     }
     public function getSql() {
-        var_dump(IMServiceImpl::getInstance()->readChatUser(cmf_get_current_user_id(), 2, 0, 100));
+//         var_dump(IMServiceImpl::getInstance()->readChat
+//         $res = IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND)->toJson();
+        var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND));
+//         var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 1, IMServiceImpl::CHAT_GROUP));
+//         return $res;
     }
     public function getUser() {
         var_dump(model("user")->getUserById(1, 2, 3)->toArray());

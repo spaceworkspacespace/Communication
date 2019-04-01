@@ -2,7 +2,21 @@
 namespace app\im\model;
 
 
+use app\im\exception\OperationFailureException;
+
 class FriendsModel extends IMModel {
+    
+    /**
+     * 获取用户的所有好友
+     * @param mixed $userId
+     * @return \think\Collection
+     */
+    public function getFriends($userId): \think\Collection {
+        return $this->getQuery()
+            ->where("user_id=:uid")
+            ->bind(["uid"=>[$userId, \PDO::PARAM_INT]])
+            ->select();
+    }
     
     /**
      * 获取用户的好友分组以及好友信息
@@ -36,5 +50,27 @@ class FriendsModel extends IMModel {
             }
         }
         return array_values($friends);
+    }
+    
+    /**
+     * 获取和联系人聊天的最后读取消息
+     * @param mixed $userId
+     * @param mixed $contactId
+     * @exception \app\im\exception\OperationFailureException
+     */
+    public function getLastRead($userId, $contactId) {
+        $resultSet = $this->getQuery()
+            ->where("user_id=:uid AND contact_id=:cid")
+            ->bind([
+                "uid"=>[$userId, \PDO::PARAM_INT],
+                "cid"=>[$contactId, \PDO::PARAM_INT],
+            ])
+            ->select();
+//         var_dump($resultSet->toArray());
+        if (!$resultSet->count()) {
+            im_log("error", "无法读取消息记录, 用户 $userId 与 $contactId 非好友.");
+            throw new OperationFailureException("无法读取非好友的聊天记录.");
+        }
+        return $resultSet[0]["last_reads"];
     }
 }

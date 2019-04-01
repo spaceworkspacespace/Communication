@@ -1,3 +1,4 @@
+
 ;
 var initIM = (function ($, _) {
 	function initIM(config) {
@@ -34,12 +35,8 @@ var initIM = (function ($, _) {
 				// brief: true
 				title: config.title || "IM",
 				notice: true,
-				init: {
-					url: urls.init
-				},
-				members: {
-					url: urls.members
-				},
+				init: { url: urls.init },
+				members: { url: urls.members },
 				uploadImage: { url: urls.uploadImage },
 				uploadFile: { url: urls.uploadFile },
 				// tool: [{
@@ -53,31 +50,35 @@ var initIM = (function ($, _) {
 				copyright: true,
 			});
 
-			client.onxadd = function(data) {
-				
-			}
-
 			// 监听发送消息
 			layim.on('sendMessage', function (data) {
 				// console.log(data)
-				$.post('/im/chat/message', 
-					{ id: data.to.id, type: data.to.type, content: data.mine.content }, 
-					function (data) { if (data.code) layer.msg(data.msg);}, 'json');
-					// 如果对方离线
-					// if (data.type == 'friend') {
-					// 	if (data.code == 0) {
-					// 		layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
-					// 		layim.setFriendStatus(data.id, 'offline');
-					// 	} else {
-					// 		layim.setChatStatus('<span style="color:green;">在线</span>');
-					// 		layim.setFriendStatus(data.id, 'online');
-					// 	}
-					// }
-				
+				$.post('/im/chat/message',
+					{ id: data.to.id, type: data.to.type, content: data.mine.content },
+					function (data) { if (data.code) layer.msg(data.msg); }, 'json');
+				// 如果对方离线
+				// if (data.type == 'friend') {
+				// 	if (data.code == 0) {
+				// 		layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
+				// 		layim.setFriendStatus(data.id, 'offline');
+				// 	} else {
+				// 		layim.setChatStatus('<span style="color:green;">在线</span>');
+				// 		layim.setFriendStatus(data.id, 'online');
+				// 	}
+				// }
+
 			});
 
 			layim.on("ready", function (res) {
-
+				// 发送启动完成的请求
+				sendFinish();
+				function sendFinish() {
+					$.ajax({
+						url: "/im/index/finish",
+						success: function (data, status, xhr) { clearInterval(timer); },
+						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
+					});
+				}
 			});
 
 			//监听查看群员
@@ -85,15 +86,15 @@ var initIM = (function ($, _) {
 
 			});
 
-			layim.on("sign", function(data) { 
+			layim.on("sign", function (data) {
 				$.ajax({
 					url: "/im/user/info",
 					method: "POST",
 					data: { sign: data },
-					success: function(data, status, xhr) {
+					success: function (data, status, xhr) {
 						layer.msg(data.msg);
 					},
-					error: function(xhr, status) {
+					error: function (xhr, status) {
 						layer.msg("网络错误 ! 请重试.");
 					}
 				});
@@ -104,8 +105,8 @@ var initIM = (function ($, _) {
 			client.onxmessage = function (data) {
 				console.log(data);
 				var msgLen = data.length;
-				for (var i=0; i<msgLen; i++) {
-					if (client.userId == data[i].fromid) continue;
+				for (var i = 0; i < msgLen; i++) {
+					if (!data[i].require && client.userId == data[i].fromid) continue;
 					// data[i].avatar || (data[i].avatar = "https://i.loli.net/2018/12/10/5c0de4003a282.png");
 					layim.getMessage(data[i]);
 				}
@@ -113,12 +114,15 @@ var initIM = (function ($, _) {
 
 			// 有新的请求信息
 			client.onxask = function (data) { layim.msgbox(data.msgCount); }
+
 			// 有新的添加命令
-			client.onxadd = function(data) {
-				for (var i=data.length-1; i>=0; i--) {
+			client.onxadd = function (data) {
+				console.log(data);
+				for (var i = data.length - 1; i >= 0; i--) {
 					layim.addList(data[i]);
 				}
 			}
+
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
