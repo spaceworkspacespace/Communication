@@ -1,5 +1,3 @@
- 
- 
 <!DOCTYPE html>
 <html>
 <head>
@@ -185,7 +183,10 @@ layui.use(['layim', 'flow'], function(){
       ,receiver_id = li.data('receiver_id')
       ,user = cache[sender_id]
       ,jilu = caches[id]
-      ,groups_info = groups[jilu.group_id];
+      ,groups_info = groups[jilu.group_id]
+      ,meinfo = cache[receiver_id];
+      
+      var friendOrGroup = {};
       
       if(isEmpty(jilu.group_id)){
     	//选择分组
@@ -213,15 +214,36 @@ layui.use(['layim', 'flow'], function(){
                 		  
                 	  	  //将好友追加到好友主面板
                           parent.layui.layim.addList({
-                            type: 'friend'
-                            ,avatar: user.avatar //好友头像
-                            ,username: user.user_nickname //好友昵称
-                            ,groupid: group //所在的分组id
-                            ,id: user.sender_id //好友ID
-                            ,sign: user.sign //好友签名
+                        	  type: 'friend'
+                                  ,avatar: user.avatar //好友头像
+                                  ,username: user.user_nickname //好友昵称
+                                  ,groupid: group //所在的分组id
+                                  ,id: jilu.sender_id //好友ID
+                                  ,sign: user.signature //好友签名
                           });
+                	  	  
                           parent.layer.close(index);
                           othis.parent().html('已同意');
+                          
+                          friendOrGroup.friend = [{
+                        		  type: 'friend'
+                                  ,avatar: meinfo.avatar //好友头像
+                                  ,username: meinfo.user_nickname //好友昵称
+                                  ,groupid: jilu.sender_friendgroup_id //所在的分组id
+                                  ,id: meinfo.id //好友ID
+                                  ,sign: meinfo.signature //好友签名
+                          }];
+                          
+                          $.ajax({
+                        	  url: '../MsgBox/addToUid',
+                        	  data: {
+                        	  	uid: sender_id,
+                        	  	data: friendOrGroup.friend
+                        	  },
+                        	  dataType: 'json',
+                        	  success:function(res){}
+                          });
+                          
                 	  }
                   })
             }
@@ -253,10 +275,26 @@ layui.use(['layim', 'flow'], function(){
                   });
                   parent.layer.close(layer.index);
                   othis.parent().html('已同意');
+                  
+                  friendOrGroup.group = [{
+                		  type: 'group'
+                         ,avatar: groups_info.avatar //群聊头像
+                         ,groupname: groups_info.groupname
+                         ,id: groups_info.id
+                  }]
+                  
+                  $.ajax({
+                	  url: '../MsgBox/addToUid',
+                	  data: {
+                	  	uid: sender_id,
+                	  	data: friendOrGroup.group
+                	  },
+                	  dataType: 'json',
+                	  success:function(res){}
+                  });
         	  }
           })
       }
-
       
     }
 
