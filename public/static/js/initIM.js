@@ -75,7 +75,7 @@ var initIM = (function ($, _) {
 				function sendFinish() {
 					$.ajax({
 						url: "/im/index/finish",
-						success: function (data, status, xhr) { clearInterval(timer); },
+						// success: function (data, status, xhr) { clearInterval(timer); },
 						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
 					});
 				}
@@ -121,6 +121,15 @@ var initIM = (function ($, _) {
 				for (var i = data.length - 1; i >= 0; i--) {
 					layim.addList(data[i]);
 				}
+			}
+			// 消息反馈功能
+			client.onxfeedback = function(sign) {
+				// console.log(sign)
+				$.ajax({
+					url: "/im/chat/messagefeedback",
+					method: "POST",
+					data: {sign: sign},
+				});
 			}
 
 			client.onxconnected = function (data) {
@@ -176,6 +185,14 @@ var initIM = (function ($, _) {
 						break;
 				}
 			}
+			// 删除本地数据
+			// var cache = layui.layim.cache();
+			// var local = layui.data('layim')[cache.mine.id];
+			// delete local.chatlog;
+			// layui.data('layim', {
+			// 	key: cache.mine.id, 
+			// 	value: local
+			// });
 
 			window.layim = layim;
 		});

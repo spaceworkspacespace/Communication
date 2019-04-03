@@ -87,6 +87,7 @@ class GatewayImpl implements IGateway, IIM {
     public onxask: (data: any) => any;
     public onxadd: (data: GatewayMessage.MessagePayload) => any;
     public onxconnected: (data: GatewayMessage.MessagePayload) => any;
+    public onxfeedback: (sign: string)=>any;
 
     constructor(config: GatewaySettings) {
         if (this && this.constructor !== GatewayImpl) return new GatewayImpl(config);
@@ -138,6 +139,8 @@ class GatewayImpl implements IGateway, IIM {
                         if (this.onxadd) this.onxadd(msg.data);
                         break;
                 }
+                // 如果有 sign 字段, 调用回调
+                if (frame.sign && this.onxfeedback) this.onxfeedback(frame.sign);
 
             } catch (e) {
                 console.error(e);

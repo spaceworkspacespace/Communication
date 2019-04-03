@@ -73,4 +73,14 @@ class FriendsModel extends IMModel {
         }
         return $resultSet[0]["last_reads"];
     }
+    
+    public function setLastRead($userId, $contactId, $msgId) {
+        $this->getQuery()
+            ->where("user_id=:uid AND contact_id=:fid")
+            ->bind([
+                "uid"=>[$userId, \PDO::PARAM_INT],
+                "fid"=>[$contactId, \PDO::PARAM_INT],
+            ])
+            ->update(["last_reads"=>$msgId]);
+    }
 }

@@ -25,7 +25,7 @@ $gateway = new Gateway("websocket://0.0.0.0:8282");
 // gateway名称，status方便查看
 $gateway->name = 'IM';
 // gateway进程数
-$gateway->count = 4;
+$gateway->count = 2;
 // 本机ip，分布式部署时使用内网ip
 // $gateway->lanIp = '127.0.0.1';
 $gateway->lanIp = '192.168.0.80';

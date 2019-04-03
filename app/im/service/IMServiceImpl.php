@@ -16,6 +16,7 @@ use think\Db;
 use app\im\model\UserModel;
 use think\db\Connection;
 use think\Collection;
+use app\im\model\RedisModel;
 
 class IMServiceImpl implements IIMService, IChatService, IPushService
 {
@@ -28,8 +29,10 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
      * @return IIMService | ChatService
      */
     public static function getInstance() : IMServiceImpl{
-        if (!static::$instance) static::$instance = new static();
-        static::$query  = new Query(Db::connect(array_merge(config("database"), ['prefix'   => ''])));
+        if (!static::$instance) {
+            static::$instance = new static();
+            static::$query  = new Query(Db::connect(array_merge(config("database"), ['prefix'   => ''])));
+        }
         return static::$instance;
     }
     
@@ -449,13 +452,55 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
         }
     }
     
+    public function messageFeedback($userId, $sign)  {
+        $cache = RedisModel::getRedis();
+        $hashName = config("im.cache_chat_last_send_time_key");
+        $data = $cache->rawCommand("HGET", $hashName, $sign);
+        if (!$data) {
+            im_log("error", "$hashName 中的数据只应由 MVC 框架删除.");
+            return;
+        }
+        $cdata = json_decode($data, true);
+        // 获取聊天记录信息
+        $data = $cdata["rawdata"];
+        if (!$data) {
+            im_log("error", "缓存消息格式错误. ", $cdata);
+            return;
+        }
+        switch ($data["payload"]["type"]) {
+            case IGatewayService::MESSAGE_TYPE: 
+                $msgs = $data["payload"]["data"];
+                // 根据 type 将消息分类
+                $tidy = [];
+                foreach($msgs as $msg) {
+                    if (!isset($tidy[$msg["type"]])) {
+                        $tidy[$msg["type"]] = [];
+                    }
+                    array_push($tidy[$msg["type"]], $msg);
+                }
+                // 执行已读操作
+                $types = array_keys($tidy);
+                foreach($types as $type) {
+                    $cids = array_column($tidy[$type], "cid");
+                    $type = $type!=="group"? static::CHAT_FRIEND: static::CHAT_GROUP;
+                    im_log("debug", "标记已读消息, user: $userId, cids: ", $cids, ", type: $type");
+                    static::readMessage($userId, $cids, $type);
+                }
+                break;
+            default:
+                im_log("notice", "反馈了为实现处理方式的消息: ", $data);
+        }
+        
+        // 清除缓存
+        $cache->rawCommand("HDEL", $hashName, $sign);
+    }
+    
     public function pushAll($uid): bool
     {
         $this->pushMsgBoxNotification($uid);
         $this->pushUnreadMessage($uid);
         return true;
     }
-    
     
     public function pushMsgBoxNotification($uid): bool
     {
@@ -477,10 +522,16 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     
     public function pushUnreadMessage($uid,$contactId=null, $type=IChatService::CHAT_FRIEND): bool
     {
-        $friend = $group = null;
+        $friend = $group = [];
         if ($contactId) {
-            $friend = $this->getUnreadMessage($uid, $contactId, static::CHAT_FRIEND)->toArray();
-            $group = $this->getUnreadMessage($uid, $contactId, static::CHAT_GROUP)->toArray();
+            switch($type) {
+                case IChatService::CHAT_FRIEND:
+                    $friend = $this->getUnreadMessage($uid, $contactId, static::CHAT_FRIEND)->toArray();
+                    break;
+                case IChatService::CHAT_GROUP:
+                    $group = $this->getUnreadMessage($uid, $contactId, static::CHAT_GROUP)->toArray();
+                    break;
+            }
         } else {
             // 循环执行 sql, 之后再改吧.
             // 获取所有好友和分组
@@ -492,6 +543,20 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
             foreach ($friends as $item) {
 //                 var_dump([$uid, $item["contact_id"]]);
                 $result = $this->getUnreadMessage($uid, $item["contact_id"], static::CHAT_FRIEND)->toArray();
+                
+                $result = array_map(function($entry)use($uid, $item){
+                    if ($entry["id"] == $uid) {
+                        return array_merge($entry, [
+                            "id"=> $item["contact_id"],
+                            "mine"=>true
+                        ]);
+                    }
+                    return array_merge($entry, [
+                        "id"=> $item["contact_id"],
+                        "mine"=>false
+                    ]);
+                }, $result);
+                
                 $friend = array_merge($friend, $result);
             }
             $group=[];
@@ -523,13 +588,13 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                 "type"=>"friend",
                 "content"=>$item["content"],
                 "cid"=>$item["cid"],
-                "mine"=>false,
+                "mine"=>$item["mine"],
                 "fromid"=>$item["id"],
                 "timestamp"=>$item["send_date"]*1000,
                 "require"=> true
             ];
         }, $friend);
-        GatewayServiceImpl::msgToGroup($uid, $group);
+        GatewayServiceImpl::msgToUid($uid, $group);
         GatewayServiceImpl::msgToUid($uid, $friend);
         return true;
     }
@@ -595,6 +660,165 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
             im_log("error", "读取聊天信息失败! $userId", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
         }
+    }
+    
+    public function readMessage($userId, $cids, $type) {
+        im_log("debug", "readMessage $type start.");
+        $cache = RedisModel::getRedis();
+        $cacheName = config("im.cache_chat_read_message_key");
+        
+        // 更新群聊已读
+        if (static::CHAT_FRIEND !== $type) {
+            // 获取消息信息
+            $chatMsg = [];
+            $resultSet = model("chat_group")->getUnreadMessageByMsgId($userId, $cids);
+            // 用户无法关联这些消息（消息对用户不可见）
+            if (!count($resultSet)) return;
+            // 通过群聊 id 分组
+            foreach($resultSet as $item) {
+                if (!isset($chatMsg[$item["group_id"]])) {
+                    $chatMsg[$item["group_id"]] = []; 
+                }
+                array_push($chatMsg[$item["group_id"]], $item);
+            }
+            // 逐个分组处理
+            foreach($chatMsg as $key => $groupMsg) {
+                $groupId = $key;
+                $fieldName = "group-$userId-$groupId";
+                // 获取在缓存中的已读消息记录
+                $readIds = $cache->rawCommand("HGET", $cacheName, $fieldName);
+                // 解析格式
+                if (!$readIds) {
+                    $readIds = [];
+                } else {
+                    $readIds = json_decode($readIds, true);
+                }
+                // 获取这一次标记的已读消息 id
+                $markIds = array_column($groupMsg, "chat_id");
+                im_log("debug", "这次请求标记群聊 $groupId 已读消息 ", $markIds, ", 已标记已读消息 ", $readIds, ", 用户: $userId");
+                // 获取新标记的消息 id
+                $newIds = array_diff($markIds, $readIds);
+                // 没有新标记的 id
+                if (!count($newIds)) {
+                    return;
+                }
+                // 整合所有标记的 id, 并重新检查用户是否已经连续收到消息 (在某个消息记录区间没有丢失的消息, 比如消息 id 1~10 之间用户都有收到).
+                $readIds = array_unique(array_merge($readIds, $newIds));
+                sort($readIds);
+                im_log("debug", "群聊 $groupId 已读消息 ", $readIds, ", 用户: $userId");
+                // 获取最早一条未读消息
+                $oldest = model("chat_group")->getOldestUnreadMessage($userId, $groupId);
+                im_log("debug", "群聊 $groupId 最早的未读消息 ", $oldest, ", 用户: $userId");
+                // 在最早的已读消息之前还有没读到的消息, 暂存缓存, 下次继续. 
+                if ($oldest && $oldest["chat_id"] != $readIds[0]) {
+                    $cache->rawCommand("HSET", $cacheName, $fieldName, json_encode($readIds));
+                    return;
+                }
+                // 查询数据库中的消息记录, 查看已读消息是否为连续区间.
+                $idRange = model("chat_group")->getMessageByIdRange($userId, $groupId, $readIds[0], $readIds[count($readIds)-1]);
+                // 获取到了数据库中一段连续的消息 id, 如果这段 id 与现在标记的已读消息 id 是相同的, 说明用户完整地接收了消息.
+                $idRange = array_column($idRange, "chat_id");
+
+                $readId = $unreadIds = null;
+                $unreadIds = array_diff($idRange, $readIds);
+                im_log("debug", "群聊 $groupId 所有消息 ", $idRange, ", 已读消息", $readIds, ", 用户: $userId");
+                // 重新获取到了最早的未读消息 id.
+                if (count($unreadIds)) {
+                    $unreadId = array_reduce($unreadIds, function($min, $current) {
+                        return $current < $min? $current: $min;
+                    }, 0);
+                    $readId = array_search($unreadId, $unreadIds);
+                    // 最后的已读信息 id
+                    $readId = $idRange[$readId-1];
+                } else { // 如果用户获得了连续完整的消息记录, 就完全更新.
+                    $readId = $idRange[count($idRange)-1];
+                }
+                // 清除连续范围已读的消息标记并更新用户最后已读
+                $readIds = array_filter($readIds, function($item) use ($readId){
+                    return $item > $readId;
+                });
+               im_log("debug", "群聊 $groupId 确认消息已读 ", $readId, ", 用户: $userId");
+               $cache->rawCommand("HSET", $cacheName, $fieldName, json_encode($readIds));
+               model("groups")->setLastRead($userId, $groupId, $readId);
+            }
+        } else  { // 更新好友已读
+            // 获取消息信息
+            $chatMsg = [];
+            $resultSet = model("chat_user")->getUnreadMessageByMsgId($userId, $cids);
+            // 用户无法关联这些消息（消息对用户不可见）
+            if (!count($resultSet)) return;
+            // 通过好友 id 分组
+            foreach($resultSet as $item) {
+                $friendId = $item["sender_id"] != $userId? 
+                    $item["sender_id"]: $item["receiver_id"];
+                
+                    if (!isset($chatMsg[$friendId])) {
+                        $chatMsg[$friendId] = [];
+                }
+                array_push($chatMsg[$friendId], $item);
+            }
+            // 逐个好友处理
+            foreach($chatMsg as $key => $friendMsg) {
+                $friendId = $key;
+                $fieldName = "friend-$userId-$friendId";
+                // 获取在缓存中的已读消息记录
+                $readIds = $cache->rawCommand("HGET", $cacheName, $fieldName);
+                // 解析格式
+                if (!$readIds) {
+                    $readIds = [];
+                } else {
+                    $readIds = json_decode($readIds, true);
+                }
+                // 获取这一次标记的已读消息 id
+                $markIds = array_column($friendMsg, "chat_id");
+                im_log("debug", "这次请求标记聊天 $friendId 已读消息 ", $markIds, ", 已标记已读消息 ", $readIds, ", 用户: $userId");
+                // 获取新标记的消息 id
+                $newIds = array_diff($markIds, $readIds);
+                // 没有新标记的 id
+                if (!count($newIds)) {
+                    return;
+                }
+                // 整合所有标记的 id, 并重新检查用户是否已经连续收到消息 (在某个消息记录区间没有丢失的消息, 比如消息 id 1~10 之间用户都有收到).
+                $readIds = array_unique(array_merge($readIds, $newIds));
+                sort($readIds);
+                im_log("debug", "聊天 $friendId 已读消息 ", $readIds, ", 用户: $userId");
+                // 获取最早一条未读消息
+                $oldest = model("chat_user")->getOldestUnreadMessage($userId, $friendId);
+                im_log("debug", "聊天 $friendId 最早的未读消息 ", $oldest, ", 用户: $userId");
+                // 在最早的已读消息之前还有没读到的消息, 暂存缓存, 下次继续.
+                if ($oldest["chat_id"] != $readIds[0]) {
+                    $cache->rawCommand("HSET", $cacheName, $fieldName, json_encode($readIds));
+                    return;
+                }
+                // 查询数据库中的消息记录, 查看已读消息是否为连续区间.
+                $idRange = model("chat_user")->getMessageByIdRange($userId, $friendId, $readIds[0], $readIds[count($readIds)-1]);
+                // 获取到了数据库中一段连续的消息 id, 如果这段 id 与现在标记的已读消息 id 是相同的, 说明用户完整地接收了消息.
+                $idRange = array_column($idRange, "chat_id");
+                
+                $readId = $unreadIds = null;
+                $unreadIds = array_diff($idRange, $readIds);
+                im_log("debug", "聊天 $friendId 所有消息 ", $idRange, ", 已读消息", $readIds, ", 用户: $userId");
+                // 重新获取到了最早的未读消息 id.
+                if (count($unreadIds)) {
+                    $unreadId = array_reduce($unreadIds, function($min, $current) {
+                        return $current < $min? $current: $min;
+                    }, 0);
+                        $readId = array_search($unreadId, $unreadIds);
+                        // 最后的已读信息 id
+                        $readId = $idRange[$readId-1];
+                } else { // 如果用户获得了连续完整的消息记录, 就完全更新.
+                    $readId = $idRange[count($idRange)-1];
+                }
+                // 清除连续范围已读的消息标记并更新用户最后已读
+                $readIds = array_filter($readIds, function($item) use ($readId){
+                    return $item > $readId;
+                });
+                    im_log("debug", "聊天 $friendId 确认消息已读 ", $readId, ", 用户: $userId");
+                    $cache->rawCommand("HSET", $cacheName, $fieldName, json_encode($readIds));
+                    model("friends")->setLastRead($userId, $friendId, $readId);
+            }
+        }
+        im_log("debug", "readMessage $type end.");
     }
     
     public function sendToGroup($fromId, $toId, $content, $ip=null)

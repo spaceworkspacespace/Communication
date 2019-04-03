@@ -8,6 +8,11 @@ interface IGatewayService {
     public const UPDATE_TYPE = "UPDATE";
     public const ADD_TYPE = "ADD";
     
+    /**
+     * 暂存消息记录到缓存, 用于重发
+     */
+    public static function cacheMessage($data);
+    
     public static function updateToUid($uid, $data): void;
     
     /**

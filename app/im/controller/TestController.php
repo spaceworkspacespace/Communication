@@ -13,6 +13,7 @@ use app\im\util\RSAUtils;
 use app\im\service\SecurityService;
 use app\im\service\IMServiceImpl;
 use app\im\model\RedisModel;
+use think\Queue;
 
 
 class TestController extends Controller {
@@ -26,9 +27,11 @@ class TestController extends Controller {
     public function getSql() {
 //         var_dump(IMServiceImpl::getInstance()->readChat
 //         $res = IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND)->toJson();
-        var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND));
+//         var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND));
 //         var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 1, IMServiceImpl::CHAT_GROUP));
 //         return $res;
+        // var_dump(model("chat_group")->getUnreadMessageByMsgId(1, [34, 33, 35, 36] ));
+        var_dump(model("chat_user")->getUnreadMessageByMsgId(1, [0, 55, 66, 24, 33, 71, 68, 74]));
     }
     public function getUser() {
         var_dump(model("user")->getUserById(1, 2, 3)->toArray());
@@ -54,11 +57,12 @@ class TestController extends Controller {
     }
     
     public function getIndex() {
-        $security = SecurityService::getInstance();
-        $text = "NjM++aW5IW9Of/81msw8Ww==";
-        $key = "user-1-im-1553751780";
-        var_dump($security->getUserKey(1));
-        var_dump($security->decrypt($text, $key));
+//         $security = SecurityService::getInstance();
+//         $text = "NjM++aW5IW9Of/81msw8Ww==";
+//         $key = "user-1-im-1553751780";
+//         var_dump($security->getUserKey(1));
+//         var_dump($security->decrypt($text, $key));
+        
     }
     
     public function postIndex() {

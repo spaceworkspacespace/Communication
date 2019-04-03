@@ -12,6 +12,16 @@ class GroupsModel extends IMModel {
             ->select();
     }
     
+    public function getUserIdInGroup($giu) {
+        $resultSet = $this->getQuery()
+            ->field("user_id")
+            ->where("contact_id=:gid")
+            ->bind(["gid"=>[$giu, \PDO::PARAM_INT]])
+            ->select()
+            ->toArray();
+        return array_column($resultSet, "user_id");
+    }
+    
     /**
      * 获取和联系人聊天的最后读取消息
      * @param mixed $userId
@@ -49,5 +59,15 @@ class GroupsModel extends IMModel {
         return array_map(function($item) {
             return [$item["contact_id"]=>$item["last_reads"]];
         }, $resultSet->toArray());
+    }
+    
+    public function setLastRead($userId, $contactId, $msgId) {
+        $this->getQuery()
+            ->where("user_id=:uid AND contact_id=:gid")
+            ->bind([
+                "uid"=>[$userId, \PDO::PARAM_INT],
+                "gid"=>[$contactId, \PDO::PARAM_INT],
+            ])
+            ->update(["last_reads"=>$msgId]);
     }
 }

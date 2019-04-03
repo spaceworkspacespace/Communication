@@ -8,6 +8,6 @@ return [
     ],
     "keys_update" => [],
     "gateway_send" => [
-        "app\\im\\behavior\\MsgCryptoBehavior"
+        "app\\im\\behavior\\MsgCryptoBehavior",
     ]
 ];

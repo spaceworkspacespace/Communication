@@ -16,6 +16,13 @@ interface IChatService {
     public function getUnreadMessage($userId, $contactId, $type): \think\Collection;
     
     /**
+     * 更新用户收到的消息
+     * @param mixed $userId
+     * @param mixed $sign
+     */
+    public function messageFeedback($userId, $sign) ;
+    
+    /**
      * 读取群组的聊天记录
      * @param mixed $groupId
      */
@@ -26,6 +33,14 @@ interface IChatService {
      * @param mixed $userId
      */
     public function readChatUser($Id, $userId, int $pageNo, int $pageSize): \think\Collection;
+    
+    /**
+     * 将消息设为已读
+     * @param mixed $userId
+     * @param array $cids
+     * @param integer $type
+     */
+    public function readMessage($userId, $cids, $type);
     
     /**
      * 发送聊天信息给用户

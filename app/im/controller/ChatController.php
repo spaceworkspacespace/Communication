@@ -115,6 +115,15 @@ class ChatController extends Controller{
     }
     
     /**
+     * 客户端的消息反馈, 说明已经收到信息
+     * @param mixed $sign
+     */
+    public function postMessageFeedback($sign) {
+        $this->service->messageFeedback(cmf_get_current_user_id(), $sign);
+        return $sign;
+    }
+    
+    /**
      * 聊天文件, 群组和用户的.
      * @param mixed $file
      */
