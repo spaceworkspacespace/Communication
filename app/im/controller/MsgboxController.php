@@ -4,6 +4,7 @@ namespace app\im\controller;
 
 use think\Controller;
 use think\Db;
+use app\im\service\GatewayServiceImpl;
 
 class MsgboxController extends Controller {
     
@@ -50,7 +51,6 @@ class MsgboxController extends Controller {
         
         //根据外键查询发送人信息
         $udata = Db::table('cmf_user')
-        ->where('id','in',$sender_ids)
         ->select();
         
         //初始化承载外键的数组
@@ -154,6 +154,7 @@ class MsgboxController extends Controller {
             
             //提交事务
             Db::commit();
+//             Db::rollback();
             $res = 1;
         } catch (\Exception $e) {
             im_log("debug", $e);
@@ -215,6 +216,7 @@ class MsgboxController extends Controller {
             
             //提交事务
             Db::commit();
+//             Db::rollback();
             $res = 1;
         } catch (\Exception $e) {
             im_log("error", $e);
@@ -309,6 +311,12 @@ class MsgboxController extends Controller {
         }
         
         return $datas;
+    }
+    
+    public function addToUid($uid, $data) {
+        
+        GatewayServiceImpl::addToUid($uid, $data);
+    
     }
     
 }
