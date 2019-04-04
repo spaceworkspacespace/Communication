@@ -5,15 +5,83 @@ use app\im\service\SecurityService;
 use GatewayClient\Gateway;
 
 class InitBehavior {
-//     public static keysUpdate
+    public const forceAjaxUrl = [
+        "/test/req",
+        ["/im/chat/messagepicture", "POST"],
+        ["/im/chat/messagefile", "POST"],
+    ];
+    
+
     public static function appInit(&$params) {
         static::_decryptBody();
-//         $_POST["name"] = 123;
+        static::_forceAjax();
     }
     
     public static function actionBegin(&$params) {
         Gateway::$registerAddress=config("gateway.remote");
     }
+    
+    public static function _forceAjax() {
+        
+        // 获取请求地址和请求方法
+        ($url=getenv("HTTP_X_REWRITE_URL"))? $url
+            : ($url=getenv("REQUEST_URI"))? $url
+            : ($url=getenv("ORIG_PATH_INFO"))? $url
+            : ($url=getenv("SCRIPT_NAME"))? $url
+            : $url="";
+        $method = getenv("REQUEST_METHOD");
+        $url = strtolower($url);
+        $method = strtoupper($method);        
+//         var_dump($url);
+//         var_dump($method);
+        function setAjax($method) {
+            $varName = "_ajax";
+            switch($method) {
+                case "GET":
+                    $_GET[$varName] = true;
+                    break;
+                case "POST":
+                    $_POST[$varName] = true;
+                    break;
+            }
+        }
+        
+        foreach(static::forceAjaxUrl as $rule) {
+            if (is_string($rule)) {
+//                 var_dump($url);
+//                 var_dump($rule);
+//                 var_dump($url !== $rule);
+                if ($url !== $rule) continue;
+                setAjax($method);
+                return;
+            }
+            if (is_array($rule) && count($rule) > 1) {
+//                 var_dump($rule[1] !== $method);
+                if ($rule[1] !== $method) continue;
+//                 var_dump($rule[1] !== $method);
+                if ($rule[0] !== $url) continue;
+                setAjax($method);
+                return;
+            }
+        }
+        
+        
+        
+//         var_dump(getenv("REQUEST_METHOD"));
+//         var_dump(getenv("SCRIPT_NAME"));
+//         var_dump(getenv("PATH_INFO"));
+//         var_dump(getenv("REQUEST_URI"));
+//         var_dump(getenv("PATH_TRANSLATED"));
+//         var_dump(getenv("HTTP_X_REWRITE_URL"));
+//         var_dump(getenv("REQUEST_URI"));
+//         var_dump(getenv("ORIG_PATH_INFO"));
+//         $url = getenv("HTTP_X_REWRITE_URL")? getenv("HTTP_X_REWRITE_URL")
+//             : getenv("REQUEST_URI")? getenv("REQUEST_URI")
+//             : getenv("ORIG_PATH_INFO")? getenv("ORIG_PATH_INFO")
+//             : getenv("SCRIPT_NAME")? getenv("SCRIPT_NAME")
+//             : "";
+    }
+    
     /**
      * 如果是加密的 body, 则解密到 $_POST 中.
      */

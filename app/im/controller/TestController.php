@@ -24,6 +24,11 @@ class TestController extends Controller {
     public function getDb() {
         var_dump(Db::connect(config("database")) === Db::connect(config("database")));
     }
+    
+    public function getReq() {
+        var_dump($this->request->param("_ajax"));
+        var_dump($_GET["_ajax"]);
+    }
     public function getSql() {
 //         var_dump(IMServiceImpl::getInstance()->readChat
 //         $res = IMServiceImpl::getInstance()->getUnreadMessage(1, 2, IMServiceImpl::CHAT_FRIEND)->toJson();

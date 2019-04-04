@@ -99,6 +99,7 @@ class ChatController extends Controller{
      */
     public function postMessagePicture()
     {
+        im_log("debug", $_POST["_ajax"]);
         $file = $this->request->file("file");
         if (! $file) {
             $this->success("未选择任何文件.", "/", null, 0);
@@ -111,6 +112,9 @@ class ChatController extends Controller{
             return;
         }
         $url = implode(["/upload/",$info->getSaveName() ]);
+        
+        
+//         $this->request->
         $this->error("", "/", ["src"=> $url], 0);
     }
     
@@ -144,6 +148,7 @@ class ChatController extends Controller{
         $url = implode(["/upload/",$info->getSaveName() ]);
         $fileName = isset($file->getInfo()["name"])?
             $file->getInfo()["name"]:$info->getSaveName();
+        
         $this->error("", "/", ["src"=>$url, "name"=>$fileName], 0);
     }
     
