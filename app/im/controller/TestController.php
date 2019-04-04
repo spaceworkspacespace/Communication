@@ -31,7 +31,8 @@ class TestController extends Controller {
 //         var_dump(IMServiceImpl::getInstance()->getUnreadMessage(1, 1, IMServiceImpl::CHAT_GROUP));
 //         return $res;
         // var_dump(model("chat_group")->getUnreadMessageByMsgId(1, [34, 33, 35, 36] ));
-        var_dump(model("chat_user")->getUnreadMessageByMsgId(1, [0, 55, 66, 24, 33, 71, 68, 74]));
+//         var_dump(model("chat_user")->getUnreadMessageByMsgId(1, [0, 55, 66, 24, 33, 71, 68, 74]));
+        var_dump(model("friends")->isFriend(2, 1));
     }
     public function getUser() {
         var_dump(model("user")->getUserById(1, 2, 3)->toArray());

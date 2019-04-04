@@ -74,6 +74,25 @@ class FriendsModel extends IMModel {
         return $resultSet[0]["last_reads"];
     }
     
+    /**
+     * 判断两个用户是否为好友
+     * @param mixed $userId
+     * @param mixed $userId2
+     */
+    public function isFriend($userId, $userId2): bool {
+        $count = $this->getQuery()
+            ->where("user_id=:id3 AND contact_id=:id4")
+            ->whereOr("user_id=:id1 AND contact_id=:id2")
+            ->bind([
+                "id1"=>[$userId, \PDO::PARAM_INT],
+                "id2"=>[$userId2, \PDO::PARAM_INT],
+                "id3"=>[$userId2, \PDO::PARAM_INT],
+                "id4"=>[$userId, \PDO::PARAM_INT],
+            ])
+            ->count("user_id");
+        return $count;
+    }
+    
     public function setLastRead($userId, $contactId, $msgId) {
         $this->getQuery()
             ->where("user_id=:uid AND contact_id=:fid")

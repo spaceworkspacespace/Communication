@@ -14,12 +14,12 @@ class ChatUserModel extends IMModel {
 (SELECT chat.id AS chat_id, chat.receiver_id, chat.sender_id, chat.send_date, content, f.user_id, f.last_reads
 	FROM im_chat_user chat
 		JOIN im_friends f ON chat.sender_id = f.user_id AND chat.receiver_id=contact_id
-	WHERE chat.sender_id=$userId AND chat.receiver_id=$friendId AND chat.id=>$minId AND chat.id<=$maxId)
+	WHERE chat.sender_id=$userId AND chat.receiver_id=$friendId AND chat.id>=$minId AND chat.id<=$maxId)
 UNION
 (SELECT chat.id AS chat_id, chat.receiver_id, chat.sender_id, chat.send_date, content, f.user_id, f.last_reads
 	FROM im_chat_user chat
 		JOIN im_friends f ON chat.receiver_id = f.user_id AND chat.sender_id=contact_id
-	WHERE receiver_id=$userId AND chat.sender_id=$friendId AND chat.id=>$minId AND chat.id<=$maxId)
+	WHERE receiver_id=$userId AND chat.sender_id=$friendId AND chat.id>=$minId AND chat.id<=$maxId)
 ORDER BY chat_id ASC
 ;
 SQL;

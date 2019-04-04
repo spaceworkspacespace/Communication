@@ -191,7 +191,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                 ->alias("chat")
                 ->field("user.id, avatar, user_nickname AS username, send_date AS date, content, chat.id AS cid, UNIX_TIMESTAMP(chat.send_date) AS send_date")
                 ->join(["cmf_user"=>"user"], "chat.sender_id=user.id", "LEFT OUTER")
-                ->where("chat.id >= :unReadId AND (chat.sender_id=:sender AND chat.receiver_id=:receiver AND chat.visible_sender=1 OR chat.sender_id=:receiver2 AND chat.receiver_id=:sender2 AND chat.visible_receiver=1)")
+                ->where("chat.id > :unReadId AND (chat.sender_id=:sender AND chat.receiver_id=:receiver AND chat.visible_sender=1 OR chat.sender_id=:receiver2 AND chat.receiver_id=:sender2 AND chat.visible_receiver=1)")
                 ->bind([
                     "unReadId"=>[$lastMsgId, \PDO::PARAM_INT],
                     "sender"=>[$userId, \PDO::PARAM_INT],
@@ -213,7 +213,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                 ->alias("chat")
                 ->field("user.id, user.avatar, user_nickname AS username, content, chat.id AS cid, chat.group_id, UNIX_TIMESTAMP(chat.send_date) AS send_date")
                 ->join(["cmf_user"=>"user"], "chat.sender_id=user.id")
-                ->where("chat.id >= :unReadId AND chat.group_id=:gid")
+                ->where("chat.id > :unReadId AND chat.group_id=:gid")
                 ->bind([
                     "unReadId"=>[$lastMsgId, \PDO::PARAM_INT],
                     "gid"=>[$contactId, \PDO::PARAM_INT],
@@ -344,9 +344,14 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     
     public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip = null): void
     {
-        if ($sender == $receiver) 
+        // 判断自己
+        if ($sender == $receiver)  {
             throw new OperationFailureException("您不能添加自己为好友~"); 
-            
+        }
+        // 判断已经是好友
+        if (model("friends")->isFriend($sender, $receiver)) {
+            throw  new OperationFailureException("你们已经是好友了~");
+        }
         $dateStr = date(self::SQL_DATE_FORMAT);
         $query = model("msg_box")->getQuery();
         $friendGroup = model("friend_groups")->getQuery();
@@ -673,7 +678,10 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
             $chatMsg = [];
             $resultSet = model("chat_group")->getUnreadMessageByMsgId($userId, $cids);
             // 用户无法关联这些消息（消息对用户不可见）
-            if (!count($resultSet)) return;
+            if (!count($resultSet)) {
+                im_log("notice", "尝试标记不可读取或已读的消息. user: $userId, cids: ", array_diff($cids, $resultSet), ", type: $type");
+                return;
+            }
             // 通过群聊 id 分组
             foreach($resultSet as $item) {
                 if (!isset($chatMsg[$item["group_id"]])) {
@@ -746,7 +754,10 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
             $chatMsg = [];
             $resultSet = model("chat_user")->getUnreadMessageByMsgId($userId, $cids);
             // 用户无法关联这些消息（消息对用户不可见）
-            if (!count($resultSet)) return;
+            if (!count($resultSet)) {
+                im_log("debug", "尝试标记不可读取或已读的消息. user: $userId, cids: ", array_diff($cids, $resultSet), ", type: $type");
+                return;
+            }
             // 通过好友 id 分组
             foreach($resultSet as $item) {
                 $friendId = $item["sender_id"] != $userId? 

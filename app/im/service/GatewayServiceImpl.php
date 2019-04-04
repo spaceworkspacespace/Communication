@@ -112,36 +112,42 @@ class GatewayServiceImpl implements IGatewayService
         $uid = Gateway::getUidByClientId($clientId);
         // 获取所有消息 id
         $cids = array_column($data, "cid");
-
+        $sign = base64_urlSafeEncode(implode([$clientId, lcg_value(), time()]));
+        
         $data = [
             "id" => "u-$uid",
             "payload" => [
                 "type" => self::MESSAGE_TYPE,
                 "data" => $data
-            ]
+            ],
+            "sign"=>$sign
         ];
         
         $rawData = $data;
+        
         Hook::listen("gateway_send", $data);
         Gateway::sendToClient($clientId, $data);
         
-        $data = json_decode($data, true);
-        $sign = base64_urlSafeEncode(implode([$clientId, lcg_value(), time()]));
-        $data["sign"] = $sign;
         $addition = [
             // 发送时的参数
             "id"=>$clientId,
-            "data" => json_encode($data),
+            "data" => $data,
             // 其他描述信息
             "cids"=>$cids,
             "mark"=>$sign,
             "rawdata"=>$rawData
         ];
+        
         static::cacheMessage($addition);
     }
     
     public static function msgToGroup($group, $data): void
     {
+        $userIds = model("groups")->getUserIdInGroup($group);
+        foreach($userIds as $userId) {
+            static::msgToUid($userId, $data);
+        }
+        /*
 //         $method = "sendToGroup";
 //         $sign = base64_urlSafeEncode(implode([$method, $group, lcg_value(), time()]));
         $cids = array_column($data, "cid");
@@ -172,10 +178,16 @@ class GatewayServiceImpl implements IGatewayService
 //             "mark"=>$sign
 //         ];
 //         static::cacheMessage($addition);
+        */
     }
 
     public static function msgToUid($uid, $data): void
     {
+        $clientIds = Gateway::getClientIdByUid($uid);
+        foreach ($clientIds as $id) {
+            static::msgToClient($id, $data);
+        }
+        /*
 
 //         $sign = base64_urlSafeEncode(implode([$uid, lcg_value(), time()]));
         $cids = array_column($data, "cid");
@@ -204,6 +216,7 @@ class GatewayServiceImpl implements IGatewayService
 //             "mark"=>$sign
 //         ];
 //         static::cacheMessage($addition);
+        */
     }
 
     public static function askToClient($clientId, $data): void

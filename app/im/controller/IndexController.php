@@ -38,6 +38,9 @@ class IndexController extends HomeBaseController
 
     public function index()
     {
+        if ($this->request->isMobile()) {
+            return $this->fetch("/mobile");
+        }
         return $this->fetch("/index", []);
         // IndexController::$number
         //  self::$number + 1;

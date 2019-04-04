@@ -70,15 +70,31 @@ var initIM = (function ($, _) {
 			});
 
 			layim.on("ready", function (res) {
+
+				// 删除本地数据
+				var cache = layui.layim.cache();
+				var local = layui.data('layim')[cache.mine.id];
+				delete local.chatlog;
+				layui.data('layim', {
+					key: cache.mine.id,
+					value: local
+				});
+
 				// 发送启动完成的请求
 				sendFinish();
 				function sendFinish() {
+					// 确保在 bind 之后
+					if (!client.clientId) {
+						setTimeout(sendFinish, 500);
+						return;
+					}
 					$.ajax({
 						url: "/im/index/finish",
 						// success: function (data, status, xhr) { clearInterval(timer); },
 						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
 					});
 				}
+
 			});
 
 			//监听查看群员
@@ -105,6 +121,9 @@ var initIM = (function ($, _) {
 			client.onxmessage = function (data) {
 				console.log(data);
 				var msgLen = data.length;
+				data.sort(function(l, r) {
+					return l.timestamp > r.timestamp? 1: -1;
+				});
 				for (var i = 0; i < msgLen; i++) {
 					if (!data[i].require && client.userId == data[i].fromid) continue;
 					// data[i].avatar || (data[i].avatar = "https://i.loli.net/2018/12/10/5c0de4003a282.png");
@@ -117,28 +136,31 @@ var initIM = (function ($, _) {
 
 			// 有新的添加命令
 			client.onxadd = function (data) {
-				console.log(data);
+				// console.log(data);
 				for (var i = data.length - 1; i >= 0; i--) {
 					layim.addList(data[i]);
 				}
 			}
 			// 消息反馈功能
-			client.onxfeedback = function(sign) {
+			client.onxfeedback = function (sign) {
 				// console.log(sign)
 				$.ajax({
 					url: "/im/chat/messagefeedback",
 					method: "POST",
-					data: {sign: sign},
+					data: { sign: sign },
 				});
 			}
 
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
+				var clientId = data.id;
 				$.post('bind', { client_id: data.id }, function (data, status, xhr) {
 					client.userId = data.data.id;
+					client.clientId = clientId;
 					var ks = JSON.parse(atob(data.data.ks));
-					console.log(ks);
+					// console.log(ks);
 					client.setKeys(ks);
+					
 				}, 'json');
 			}
 
@@ -185,14 +207,7 @@ var initIM = (function ($, _) {
 						break;
 				}
 			}
-			// 删除本地数据
-			// var cache = layui.layim.cache();
-			// var local = layui.data('layim')[cache.mine.id];
-			// delete local.chatlog;
-			// layui.data('layim', {
-			// 	key: cache.mine.id, 
-			// 	value: local
-			// });
+
 
 			window.layim = layim;
 		});
