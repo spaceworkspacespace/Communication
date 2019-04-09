@@ -8,8 +8,8 @@ use GatewayWorker\Lib\Gateway;
 
 // $interval = 60 * 1;
 $interval = 5; // 定时器间隔, 单位 秒
-$maxResend = 1000; // 最大重发次数
-$minResendTime = 3; // 当发送时间过去多少秒后可以重发 
+$maxResend = 5; // 最大重发次数
+$minResendTime = 5; // 当发送时间过去多少秒后可以重发 
 Gateway::$registerAddress = "0.0.0.0:1238";
 $hashName = "im_chat_last_send_time_hash";
 $listName = "im_chat_resend_list";

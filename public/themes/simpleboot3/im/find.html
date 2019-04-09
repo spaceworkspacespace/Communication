@@ -54,13 +54,13 @@
                         </div>
                         <div v-if="condition !== 'groups'" class="col-8">
                             <p class="h4 my-0 py-0">{{g.username}}({{g.id}})</p>
-                            <p style="margin: 0; font-size: 12px;">{{g.sex !== 1? (g.sex !== 2? "保密": "女"):"男"}}</p>
-                            <p class="text-truncate" style="margin: 0;"><small>{{g.sign || "木有签名"}}</small></p>
+                            <p style="margin: 0; font-size: 12px;">性别: {{g.sex !== 1? (g.sex !== 2? "保密": "女"):"男"}}</p>
+                            <p class="text-truncate" style="margin: 0;"><small>签名: {{g.sign || "木有签名"}}</small></p>
                         </div>
                         <div v-else class="col-8">
                             <p class="h4 my-0 py-0">{{g.groupname}}({{g.id}})</p>
-                            <p style="margin: 0; font-size: 12px;">{{g.member_count}}</p>
-                            <p class="text-truncate" style="margin: 0;"><small>{{g.description}}</small></p>
+                            <p style="margin: 0; font-size: 12px;">人数: {{g.member_count}}</p>
+                            <p class="text-truncate" style="margin: 0;"><small>描述: {{g.description}}</small></p>
                         </div>
                     </div>
                     <button 

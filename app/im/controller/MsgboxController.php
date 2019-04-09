@@ -7,6 +7,22 @@ use think\Db;
 use app\im\service\GatewayServiceImpl;
 
 class MsgboxController extends Controller {
+    protected $beforeActionList = [
+        "checkUserLogin"
+    ];
+    protected function checkUserLogin()
+    {
+        $isLogin = cmf_get_current_user_id();
+        im_log("info", "用户登录验证: ", $isLogin);
+        
+        if (!$isLogin) {
+            if ($this->request->isAjax()) {
+                $this->error("您尚未登录", cmf_url("user/Login/index"));
+            } else {
+                $this->redirect(cmf_url("user/Login/index"));
+            }
+        }
+    }
     
     /**
      * 跟我接收人id查询消息

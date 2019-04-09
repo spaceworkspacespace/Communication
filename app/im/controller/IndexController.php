@@ -15,6 +15,7 @@ use app\im\service\GatewayServiceImpl;
 
 class IndexController extends HomeBaseController
 {
+    
     private $service = null;
 
     public function _initialize()
@@ -34,6 +35,7 @@ class IndexController extends HomeBaseController
 //         }
         // service
         $this->service = IMServiceImpl::getInstance();
+        $this->checkUserLogin();
     }
 
     public function index()

@@ -122,7 +122,7 @@ class ContactController extends Controller
             $id = isset($_GET["id"])? $_GET["id"]: null;
             // 查询的群聊
             $group = null;
-            if ($keyword && is_string($keyword)) {
+            if (is_string($keyword)) {
                 $group = $this->service->findGroups($keyword);
             } else if ($id && is_numeric($id)) {
                 $group = $this->service->getGroupById($id);
@@ -148,7 +148,7 @@ class ContactController extends Controller
             $id = isset($_GET["id"])? $_GET["id"]: null;
             // 查找到的用户
             $user = null;
-            if ($keyword && is_string($keyword)) {
+            if (is_string($keyword)) {
                 $user = $this->service->findFriends($keyword);
             } else if ($id && is_numeric($id)) {
                 $user = $this->service->getUserById($id);
