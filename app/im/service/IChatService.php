@@ -16,6 +16,14 @@ interface IChatService {
     public function getUnreadMessage($userId, $contactId, $type): \think\Collection;
     
     /**
+     * 用户删除了一条消息, 标识不可见
+     * @param mixed $userId
+     * @param mixed $cid
+     * @param mixed $type
+     */
+    public function hiddenMessage($userId, $cid, $type); 
+    
+    /**
      * 更新用户收到的消息
      * @param mixed $userId
      * @param mixed $sign

@@ -83,4 +83,36 @@ SQL;
 //         $statement->execute([$userId+0, $msgIds, $userId+0, $msgIds]);
         return $statement->fetchAll();
     }
+    
+    public function setVisible($userId, $cid, $visible) {
+        $args = func_get_args();
+        foreach($args as $arg) {
+            if (!is_numeric($arg)) return false;
+        }
+        if ($visible !== 0 && $visible !== 1) return false;
+        
+        $affectedCount = 0;
+        
+        $sql = <<<SQL
+UPDATE `im_chat_user` SET `visible_sender`=$visible WHERE `sender_id`=$userId AND `id`=$cid;
+SQL;
+        im_log("sql", $sql);
+        $statement = Db::connect(array_merge(config("database")))
+            ->connect()
+            ->query($sql);
+        if (!$statement) return false;
+        $affectedCount += $statement->rowCount();
+        
+        $sql = <<<SQL
+UPDATE `im_chat_user` SET `visible_receiver`=$visible WHERE `receiver_id`=$userId AND `id`=$cid;
+SQL;
+        im_log("sql", $sql);
+        $statement = Db::connect(array_merge(config("database")))
+            ->connect()
+            ->query($sql);
+        if (!$statement) return false;
+        $affectedCount += $statement->rowCount();
+        
+        return $affectedCount;
+    }
 }

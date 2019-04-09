@@ -23,12 +23,9 @@
 
 <body>
     <div id="app" class="layim-chat-main">
-        <chat-content :records="records" :id="id" @onxpull="pull" />
+        <chat-content :records="records" :id="id" @onxpull="pull" @deletexmessage="onDelMsg" :type="type"/>
     </div>
-
-
     <div id="LAY_page" style="margin: 0 10px;"></div>
-
 
     <script id="x-chat-content" type="text/x-template">
         <ul id="LAY_view">
@@ -37,12 +34,14 @@
                     <img :src="record.avatar || 'https://i.loli.net/2018/12/10/5c0de4003a282.png'">
                     <cite><i>{{ record.date }}</i>{{ record.username }}</cite>
                 </div>
-                <div class="layim-chat-text" v-html="contentRecognize(record.content)"></div>
+                <div class="layim-chat-text">
+                    <div v-if="type === 'friend'" style="position:absolute;top:0px;right:5px;cursor:pointer;z-index:1000;" class="x-msg-del" @click="onDelMsg($event, record.chat_id, record)">x</div>
+                    <div v-html="contentRecognize(record.content)"></div>
+                </div>
             </li>
             <li><a @click.prevent="$emit('onxpull')" href="#">点击加载更多</a></li>
         </ul>
     </script>
-
     <script src="__STATIC__/layim-v3.8.0/layui.js"></script>
     <script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
     <script src="__STATIC__/libs/vue-2.6.9.js"></script>
@@ -68,10 +67,12 @@
                     id: null,
                     pageNo: 0,
                     records: [],
+                    type: ""
                 }
             },
             beforeMount: function () {
                 this.pull(this.pageNo++);
+                this.type = /type=([^&]+)/.exec(location.search)[1];
             },
             methods: {
                 pull: function (pageNo) {
@@ -99,13 +100,33 @@
                 },
                 onScroll: function (event) {
                     console.log(event);
+                },
+                onDelMsg: function (record) {
+                    var index = this.records.indexOf(record);
+                    this.records.splice(index, 1);
                 }
             },
             components: {
                 "chat-content": {
-                    props: ["records", "id"],
+                    props: ["records", "id", "type"],
                     template: "#x-chat-content",
                     methods: {
+                        // 删除消息
+                        onDelMsg: function(event, cid, record) {
+                            $.ajax({
+				            	url: "/im/chat/message",
+				            	method: "DELETE",
+                                data: {cid: cid, type: this.type},
+                                context: this,
+				            	success: function(data) {
+				            		layer.msg(data.msg);
+				            		if (!data.code) this.$emit("deletexmessage", record);
+				            	},
+				            	error: function(xhr, satatus) {
+				            		layer.msg("请求错误, 请稍后重试~");
+				            	}
+				            });
+                        },
                         // 识别特殊内容
                         contentRecognize: function (content) {
                             var match;
@@ -115,16 +136,20 @@
                                 }
                             }
                             if (!match) return content;
+
                             switch (match[1]) {
                                 case "img":
                                     if (!match[2]) break;
-                                    return '<img class="layui-layim-photos" src="' + match[2] + '">';
+                                    content = '<img class="layui-layim-photos" src="' + match[2] + '">';
+                                    break;
                                 case "file":
                                     if (!match[2] || !match[3]) break;
-                                    return '<a class="layui-layim-file" href="' + match[2]
+                                    content = '<a class="layui-layim-file" href="' + match[2]
                                         + '" download="" target="_blank"><i class="layui-icon"></i><cite>' + match[3]
                                         + '</cite></a>';
+                                    break;
                             }
+
                             return content;
                         }
                     }

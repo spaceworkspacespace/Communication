@@ -80,7 +80,7 @@ var initIM = (function ($, _) {
 				// }
 
 			});
-
+			
 			layim.on("sign", function (data) {
 				$.ajax({
 					url: "/im/user/info",

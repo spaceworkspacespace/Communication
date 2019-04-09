@@ -39,6 +39,19 @@ class ChatController extends Controller{
 //     public function getIndex() {
 //         return $this->fetch("/chatlog");
 //     }
+    public function deleteMessage($cid, $type) {
+        $msg = "";
+        $data = null;
+        try {
+            $this->service->hiddenMessage(cmf_get_current_user_id(), $cid, $type !== "friend"? "group": "friend");
+            $msg = "删除成功";
+        } catch(OperationFailureException $e) {
+            $msg = $e->getMessage();
+            $this->success($msg, "/", $data, 0);
+        }
+        $this->error($msg, "/", $data, 0);
+//         return $cid;
+    }
     
     /**
      * 获取聊天记录
@@ -78,19 +91,21 @@ class ChatController extends Controller{
     public function postMessage($id, $type, $content){
         $msg = "";
         // im_log("debug", "新的消息 $id $type $content");
+        $msgId=null;
         try {
             switch(trim($type)) {
                 case "friend":
-                    $this->service->sendToUser($this->userId, $id, $content, $this->request->ip());
+                    $msgId = $this->service->sendToUser($this->userId, $id, $content, $this->request->ip());
                     break;
                 case "group":
-                    $this->service->sendToGroup($this->userId, $id, $content, $this->request->ip());
+                    $msgId = $this->service->sendToGroup($this->userId, $id, $content, $this->request->ip());
                     break;
             }
         } catch (OperationFailureException $e) {
             $msg = $e->getMessage();
             $this->success($msg, "/", null, 0);
         }
+        $this->error($msg, "/", ["cid"=> $msgId],0);
     }
     
     /**

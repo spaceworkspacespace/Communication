@@ -51,11 +51,14 @@ var initIM = (function ($, _) {
 			});
 
 			// 监听发送消息
-			layim.on('sendMessage', function (data) {
+			layim.on('sendMessage', function (data, passCid) {
 				// console.log(data)
 				$.post('/im/chat/message',
 					{ id: data.to.id, type: data.to.type, content: data.mine.content },
-					function (data) { if (data.code) layer.msg(data.msg); }, 'json');
+					function (data) {
+						if (data.code) layer.msg(data.msg);
+						if (data.data) passCid(data.data.cid);
+					}, 'json');
 				// 如果对方离线
 				// if (data.type == 'friend') {
 				// 	if (data.code == 0) {
@@ -67,6 +70,32 @@ var initIM = (function ($, _) {
 				// 	}
 				// }
 
+			});
+
+			// 监听鼠标点击发言内容
+			// layim.on("chatMsgClick", function(event) {
+			// 	console.log(event)
+			// 	var menu = $("#x-chat-del-menu");
+			// 	// 首次加入
+			// 	if (!menu.length) {
+
+			// 	}
+			// });
+
+			// 删除消息
+			layim.on("chatMsgDelete", function (cid, type, del) {
+				$.ajax({
+					url: "/im/chat/message",
+					method: "DELETE",
+					data: {cid: cid, type: type},
+					success: function(data) {
+						layer.msg(data.msg);
+						if (!data.code) del();
+					},
+					error: function(xhr, satatus) {
+						layer.msg("请求错误, 请稍后重试~");
+					}
+				});
 			});
 
 			layim.on("ready", function (res) {
@@ -119,10 +148,10 @@ var initIM = (function ($, _) {
 			// var $id = {:cmf_get_current_user_id()};
 			// 聊天消息
 			client.onxmessage = function (data) {
-				console.log(data);
+				// console.log(data);
 				var msgLen = data.length;
-				data.sort(function(l, r) {
-					return l.timestamp > r.timestamp? 1: -1;
+				data.sort(function (l, r) {
+					return l.timestamp > r.timestamp ? 1 : -1;
 				});
 				for (var i = 0; i < msgLen; i++) {
 					if (!data[i].require && client.userId == data[i].fromid) continue;
@@ -160,7 +189,7 @@ var initIM = (function ($, _) {
 					var ks = JSON.parse(atob(data.data.ks));
 					// console.log(ks);
 					client.setKeys(ks);
-					
+
 				}, 'json');
 			}
 
@@ -201,10 +230,10 @@ var initIM = (function ($, _) {
 							layim.add(options);
 						}
 						break;
-					default:
-						console.error("未知消息! ");
-						console.error(event);
-						break;
+					// default:
+					// 	console.error("未知消息! ");
+					// 	console.error(event);
+					// 	break;
 				}
 			}
 

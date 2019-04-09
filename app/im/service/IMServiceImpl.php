@@ -342,6 +342,17 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
         }
     }
     
+    public function hiddenMessage($userId, $cid, $type) {
+        try {
+            $result = model("chat_user")->setVisible($userId, $cid, 0);
+//             var_dump($result);
+            im_log("debug", "隐藏信息. user: $userId, cid: $cid, result: ", $result);
+        } catch(\Exception $e) {
+            im_log("error", "隐藏聊天信息失败, ", $e);
+            throw new OperationFailureException("删除失败，请稍后重试~");
+        }
+    }
+    
     public function linkFriendMsg($sender, $friendGroupId, $receiver, $content, $ip = null): void
     {
         // 判断自己
@@ -611,7 +622,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
 //             $pageSize=1;
             return model("chat_group")->getQuery()
                 ->alias("g")
-                ->field("u.id AS id, u.user_nickname AS username, avatar, send_date AS date, content")
+                ->field("u.id AS id, u.user_nickname AS username, avatar, send_date AS date, content, g.id AS chat_id")
                 ->join(["cmf_user"=> "u"], "g.sender_id = u.id")
                 ->where("group_id=:gid")
                 ->bind("gid", $groupId, \PDO::PARAM_INT)
@@ -630,37 +641,39 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
         if ($pageSize > 500)$pageSize = 100;
         try {
             im_log("debug", "查找用户聊天信息 Id and $userId");
-            $map=[];
-            $mapx=[];
-            $map['chat.sender_id'] = $Id;
-            $map['chat.receiver_id'] = $userId;
-            $map['chat.visible_sender']=1;
-            $mapx['chat.sender_id'] = $userId;
-            $mapx['chat.receiver_id'] = $Id;
-            $mapx['chat.visible_receiver']=1;
+//             $map=[];
+//             $mapx=[];
+//             $map['chat.sender_id'] = $Id;
+//             $map['chat.receiver_id'] = $userId;
+//             $map['chat.visible_sender']=1;
+//             $mapx['chat.sender_id'] = $userId;
+//             $mapx['chat.receiver_id'] = $Id;
+//             $mapx['chat.visible_receiver']=1;
            
-            return Db::table('im_chat_user chat')
-                ->where($map)
-                ->whereOr($mapx)
-                ->join(['cmf_user'=>'user'],'chat.sender_id=user.id')
-                ->field('user.id, avatar, user_nickname AS username, send_date AS date, content')
-                ->order('date desc')
+//             return Db::table('im_chat_user chat')
+//                 ->where($map)
+//                 ->whereOr($mapx)
+//                 ->join(['cmf_user'=>'user'],'chat.sender_id=user.id')
+//                 ->field('user.id, avatar, user_nickname AS username, send_date AS date, content')
+//                 ->order('date desc')
 //                 ->paginate($pageSize);
-                ->limit($pageNo*$pageSize, $pageSize)
-                ->select();
-            
-//             return model("chat_user")->getQuery()
-//                 ->alias("chat")
-//                 ->field("user.id, avatar, user_nickname AS username, send_date AS date, content")
-//                 ->join(["cmf_user"=> "user"], "chat.sender_id=user.id ")
-//                 ->where("chat.sender_id=:id AND chat.receiver_id=:id2 AND chat.visible_sender=1 OR chat.sender_id=:id2 AND chat.receiver_id=:id AND chat.visible_receiver=1")
-//                 ->bind([
-//                     "id"=>[ $Id, \PDO::PARAM_INT],
-//                     "id2"=>[ $userId, \PDO::PARAM_INT],
-//                 ])
-//                 ->order("date", "desc")
 //                 ->limit($pageNo*$pageSize, $pageSize)
 //                 ->select();
+            
+            return model("chat_user")->getQuery()
+                ->alias("chat")
+                ->field("user.id, avatar, user_nickname AS username, send_date AS date, content, chat.id AS chat_id")
+                ->join(["cmf_user"=> "user"], "chat.sender_id=user.id ")
+                ->where("chat.sender_id=:id AND chat.receiver_id=:id2 AND chat.visible_sender=1 OR chat.sender_id=:id3 AND chat.receiver_id=:id4 AND chat.visible_receiver=1")
+                ->bind([
+                    "id"=>[ $Id, \PDO::PARAM_INT],
+                    "id2"=>[ $userId, \PDO::PARAM_INT],
+                    "id3"=>[ $userId, \PDO::PARAM_INT],
+                    "id4"=>[ $Id, \PDO::PARAM_INT],
+                ])
+                ->order("date", "desc")
+                ->limit($pageNo*$pageSize, $pageSize)
+                ->select();
         } catch(\Exception $e) {
             im_log("error", "读取聊天信息失败! $userId", $e);
             throw new OperationFailureException("查询失败, 请稍后重试~");
@@ -889,6 +902,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                 "fromid"=>$fromId,
                 "timestamp"=>$timestamp*1000
             ]]);
+            return $msgId;
         } catch(OperationFailureException $e) {
             throw $e;
         } catch(\Exception $e) {
@@ -970,6 +984,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                     "timestamp"=>$timestamp*1000
                 ]]);
             }
+            return $msgId;
         } catch(OperationFailureException $e) {
             throw $e;
         } catch(\Exception $e) {
