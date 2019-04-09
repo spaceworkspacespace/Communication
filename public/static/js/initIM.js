@@ -87,19 +87,18 @@ var initIM = (function ($, _) {
 				$.ajax({
 					url: "/im/chat/message",
 					method: "DELETE",
-					data: {cid: cid, type: type},
-					success: function(data) {
+					data: { cid: cid, type: type },
+					success: function (data) {
 						layer.msg(data.msg);
 						if (!data.code) del();
 					},
-					error: function(xhr, satatus) {
+					error: function (xhr, satatus) {
 						layer.msg("请求错误, 请稍后重试~");
 					}
 				});
 			});
 
 			layim.on("ready", function (res) {
-
 				// 删除本地数据
 				var cache = layui.layim.cache();
 				var local = layui.data('layim')[cache.mine.id];
@@ -108,22 +107,6 @@ var initIM = (function ($, _) {
 					key: cache.mine.id,
 					value: local
 				});
-
-				// 发送启动完成的请求
-				sendFinish();
-				function sendFinish() {
-					// 确保在 bind 之后
-					if (!client.clientId) {
-						setTimeout(sendFinish, 500);
-						return;
-					}
-					$.ajax({
-						url: "/im/index/finish",
-						// success: function (data, status, xhr) { clearInterval(timer); },
-						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
-					});
-				}
-
 			});
 
 			//监听查看群员
@@ -146,6 +129,14 @@ var initIM = (function ($, _) {
 			});
 
 			// var $id = {:cmf_get_current_user_id()};
+			client.onopen = function (event) {
+				layer.msg("连接可用");
+			}
+
+			client.onxreconnection = function (event) {
+				layer.msg("连接已断开, 重连中...");
+			}
+
 			// 聊天消息
 			client.onxmessage = function (data) {
 				// console.log(data);
@@ -180,6 +171,8 @@ var initIM = (function ($, _) {
 				});
 			}
 
+
+
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				var clientId = data.id;
@@ -190,6 +183,8 @@ var initIM = (function ($, _) {
 					// console.log(ks);
 					client.setKeys(ks);
 
+					// 发送启动完成的请求
+					sendFinish();
 				}, 'json');
 			}
 
@@ -236,10 +231,24 @@ var initIM = (function ($, _) {
 					// 	break;
 				}
 			}
+			function sendFinish() {
+				// 确保在 bind 之后
+				if (!client.clientId) {
+					setTimeout(sendFinish, 500);
+					return;
+				}
+				$.ajax({
+					url: "/im/index/finish",
+					success: function (data, status, xhr) { layer.msg("登录成功"); },
+					error: function (xhr, status) { setTimeout(sendFinish, 1500); }
+				});
+			}
 
 
 			window.layim = layim;
 		});
 	}
+
+
 	return initIM;
 })($, _);

@@ -87,7 +87,8 @@ class GatewayImpl implements IGateway, IIM {
     public onxask: (data: any) => any;
     public onxadd: (data: GatewayMessage.MessagePayload) => any;
     public onxconnected: (data: GatewayMessage.MessagePayload) => any;
-    public onxfeedback: (sign: string)=>any;
+    public onxfeedback: (sign: string) => any;
+    public onxreconnection: (this: GatewayImpl) => any;
 
     constructor(config: GatewaySettings) {
         if (this && this.constructor !== GatewayImpl) return new GatewayImpl(config);
@@ -102,7 +103,54 @@ class GatewayImpl implements IGateway, IIM {
         keys[this._id] = config.keys;
 
         this.resetHeartbeat();
+        this._initSocket();
+    }
 
+    /**
+     * 尝试重新连接 (如果断开)
+     * @param maxTime 最大重连时间 0 为不限制, 单位为毫秒
+     */
+    private async _tryReConnection(maxTime: number = 0) {
+        // 连接不可用
+        if (this._socket.readyState !== 1) {
+            let startTime = Date.now();
+            // 尝试重连
+            this._socket = await new Promise<WebSocket>((resolve, reject) => {
+                const _connection = async () => {
+                    // 重连的事件调用
+                    if (this.onxreconnection) {
+                        this.onxreconnection();
+                    }
+
+                    // 最大时间限制
+                    if (maxTime > 0 && startTime + maxTime <= Date.now()) {
+                        reject(new Error("WebSocket 重连超时."));
+                    }
+
+                    try {
+                        let socket = new WebSocket(this._url);
+
+                        // 等到连接可用
+                        await new Promise<void>((resolve, reject) => {
+                            socket.onopen = () => resolve();
+                            socket.onclose = () => reject("连接已关闭.");
+                            socket.onerror = () => reject("连接错误.");
+                        });
+                        resolve(socket);
+                    } catch (e) {
+                        console.error(e);
+                        setTimeout(() => _connection(), 1000);
+                    }
+                }
+
+                _connection();
+            });
+            this._initSocket();
+            this.onopen(new CustomEvent("open"));
+        }
+    }
+
+    private _initSocket() {
         this._socket.onmessage = (event: MessageEvent) => {
             try {
                 // console.log(event.data)
@@ -152,10 +200,15 @@ class GatewayImpl implements IGateway, IIM {
         this._socket.onopen = (event: Event) => {
             return this.onopen && this.onopen(event);
         }
+
         this._socket.onclose = (event: CloseEvent) => {
-            // return this.onclose && this.onclose(event);
-            this._socket = new WebSocket(this._url);
+            if (this.onclose) {
+                this.onclose(event);
+            } else {
+                this._tryReConnection();
+            }
         }
+
         this._socket.onerror = function (event) {
             return this.onerror && this.onerror(event);
         }
@@ -164,6 +217,7 @@ class GatewayImpl implements IGateway, IIM {
     // 发送心跳
     private _sendHeartbeat(): void {
         try {
+            this._tryReConnection();
             this._socket.send(this._pingData);
         } catch (e) {
             this._socket = new WebSocket(this._url);

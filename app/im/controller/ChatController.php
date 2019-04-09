@@ -7,6 +7,7 @@ use think\Controller;
 use app\im\service\IMServiceImpl;
 use app\im\service\GatewayServiceImpl;
 use GatewayClient\Gateway;
+use app\im\service\IChatService;
 
 class ChatController extends Controller{
     protected $beforeActionList = [
@@ -43,7 +44,7 @@ class ChatController extends Controller{
         $msg = "";
         $data = null;
         try {
-            $this->service->hiddenMessage(cmf_get_current_user_id(), $cid, $type !== "friend"? "group": "friend");
+            $this->service->hiddenMessage(cmf_get_current_user_id(), $cid, $type !== "friend"? IChatService::CHAT_GROUP:  IChatService::CHAT_FRIEND);
             $msg = "删除成功";
         } catch(OperationFailureException $e) {
             $msg = $e->getMessage();

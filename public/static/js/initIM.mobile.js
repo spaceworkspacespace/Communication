@@ -62,25 +62,33 @@ var initIM = (function ($, _) {
 				copyright: true,
 			});
 
+			// 删除消息
+			layim.on("chatMsgDelete", function (cid, type, del) {
+				$.ajax({
+					url: "/im/chat/message",
+					method: "DELETE",
+					data: { cid: cid, type: type },
+					success: function (data) {
+						if (!data.code) del();
+						layer.msg(data.msg);
+					},
+					error: function (xhr, satatus) {
+						layer.msg("请求错误, 请稍后重试~");
+					}
+				});
+			});
+
 			// 监听发送消息
-			layim.on('sendMessage', function (data) {
+			layim.on('sendMessage', function (data, passCid) {
 				// console.log(data)
 				$.post('/im/chat/message',
 					{ id: data.to.id, type: data.to.type, content: data.mine.content },
-					function (data) { if (data.code) layer.msg(data.msg); }, 'json');
-				// 如果对方离线
-				// if (data.type == 'friend') {
-				// 	if (data.code == 0) {
-				// 		layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
-				// 		layim.setFriendStatus(data.id, 'offline');
-				// 	} else {
-				// 		layim.setChatStatus('<span style="color:green;">在线</span>');
-				// 		layim.setFriendStatus(data.id, 'online');
-				// 	}
-				// }
-
+					function (data) {
+						if (data.code) layer.msg(data.msg);
+						if (data.data) passCid(data.data.cid);
+					}, 'json');
 			});
-			
+
 			layim.on("sign", function (data) {
 				$.ajax({
 					url: "/im/user/info",
@@ -94,6 +102,15 @@ var initIM = (function ($, _) {
 					}
 				});
 			});
+
+			// var $id = {:cmf_get_current_user_id()};
+			client.onopen = function (event) {
+				layer.msg("连接可用");
+			}
+
+			client.onxreconnection = function (event) {
+				layer.msg("连接已断开, 重连中...");
+			}
 
 			// var $id = {:cmf_get_current_user_id()};
 			// 聊天消息
@@ -142,15 +159,15 @@ var initIM = (function ($, _) {
 
 					// 删除本地数据
 					try {
-						console.log(layim.cache())
-						var cache = layim.cache();
-						var local = layui.data('layim')[cache.mine.id];
+						var cache = layui.mobile.layim.cache();
+						var local = layui.data('layim-mobile')[cache.mine.id];
 						delete local.chatlog;
-						layui.data('layim', {
+
+						layui.data('layim-mobile', {
 							key: cache.mine.id,
 							value: local
 						});
-					} catch (e) { 
+					} catch (e) {
 						console.error(e);
 					}
 
@@ -163,7 +180,7 @@ var initIM = (function ($, _) {
 				function sendFinish() {
 					$.ajax({
 						url: "/im/index/finish",
-						// success: function (data, status, xhr) { clearInterval(timer); },
+						success: function (data, status, xhr) { layer.msg("登录成功"); },
 						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
 					});
 				}

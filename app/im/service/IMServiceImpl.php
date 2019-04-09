@@ -344,7 +344,12 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     
     public function hiddenMessage($userId, $cid, $type) {
         try {
-            $result = model("chat_user")->setVisible($userId, $cid, 0);
+            $result = null;
+            switch($type) {
+                case static::CHAT_FRIEND:
+                    $result = model("chat_user")->setVisible($userId, $cid, 0);
+                    break;
+            }
 //             var_dump($result);
             im_log("debug", "隐藏信息. user: $userId, cid: $cid, result: ", $result);
         } catch(\Exception $e) {

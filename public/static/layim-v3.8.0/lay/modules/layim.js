@@ -940,8 +940,7 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
         return layer.msg('内容最长不能超过'+ maxLength +'个字符')
       }
       // 在追加到 DOM 节点之前添加鼠标事件
-      var chatInfo = laytpl(elemChatMain).render(data);
-      chatInfo = $(chatInfo);
+      var chatInfo = $(laytpl(elemChatMain).render(data));
       var chatInfoContent = chatInfo.find(".layim-chat-text");
       
       if (call.chatMsgClick instanceof Array) {
