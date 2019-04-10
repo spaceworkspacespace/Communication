@@ -7,22 +7,6 @@ use think\Db;
 use app\im\service\GatewayServiceImpl;
 
 class MsgboxController extends Controller {
-    protected $beforeActionList = [
-        "checkUserLogin"
-    ];
-    protected function checkUserLogin()
-    {
-        $isLogin = cmf_get_current_user_id();
-        im_log("info", "用户登录验证: ", $isLogin);
-        
-        if (!$isLogin) {
-            if ($this->request->isAjax()) {
-                $this->error("您尚未登录", cmf_url("user/Login/index"));
-            } else {
-                $this->redirect(cmf_url("user/Login/index"));
-            }
-        }
-    }
     
     /**
      * 跟我接收人id查询消息
@@ -43,7 +27,7 @@ class MsgboxController extends Controller {
         
         //获取当前登录用户信息
         $this->user = cmf_get_current_user();
-        $receiver_id = $this->user["id"];
+        $receiver_id = $this->user['id'];
         
         //查询我的消息
         $mydata = Db::table('im_msg_box')
@@ -67,6 +51,7 @@ class MsgboxController extends Controller {
         
         //根据外键查询发送人信息
         $udata = Db::table('cmf_user')
+        ->field('id,user_nickname,avatar,last_login_ip,signature,user_email')
         ->select();
         
         //初始化承载外键的数组
@@ -100,12 +85,14 @@ class MsgboxController extends Controller {
      * @param unknown $receiver_id  接收人id
      * @return number|string
      */
-    public function refuse($sender_id,$receiver_id) {
+    public function refuse($sender_id) {
+        
+        $this->user = cmf_get_current_user();
         
         $res = Db::table('im_msg_box')
         ->where([
             'sender_id' => $sender_id,
-            'receiver_id' => $receiver_id
+            'receiver_id' => $this->user['id']
         ])
         ->update(['agree' => 'n']);
         
@@ -121,12 +108,12 @@ class MsgboxController extends Controller {
      * @param unknown $group_id_you 请求人设置给接收人的分组id
      * @return number|string
      */
-    public function agreeFriends($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you) {
+    public function agreeFriends($sender_id, $send_ip, $group_id_me, $group_id_you) {
         
         //定义受影响行数
         $res = 0;
         
-        
+        $this->user = cmf_get_current_user();
         
         //开启事务
         Db::startTrans();
@@ -163,9 +150,9 @@ class MsgboxController extends Controller {
                ])
                ->value('id');
                
-               $this->agreeFirend($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you);
+               $this->agreeFirend($sender_id, $send_ip, $this->user['id'], $group_id_me, $group_id_you);
             }else{
-                $this->agreeFirend($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you);
+                $this->agreeFirend($sender_id, $send_ip, $this->user['id'], $group_id_me, $group_id_you);
             }
             
             //提交事务
@@ -182,13 +169,15 @@ class MsgboxController extends Controller {
         return $res;
     }
     
-    public function agreeGroup($sender_id, $group_id, $send_ip, $sender_nickname, $receiver_id) {
+    public function agreeGroup($sender_id, $group_id, $send_ip, $sender_nickname) {
         
         //获取当前时间
         $nowDate = date('Y-m-d h:i:s', time());
         
         //定义受影响行数
         $res = 0;
+        
+        $this->user = cmf_get_current_user();
         
         //开启事务
         Db::startTrans();
@@ -226,7 +215,7 @@ class MsgboxController extends Controller {
             Db::table('im_msg_box')
             ->where([
                 'sender_id' => $sender_id,
-                'receiver_id' => $receiver_id
+                'receiver_id' => $this->user['id']
             ])
             ->update(['agree' => 'y']);
             
@@ -245,10 +234,10 @@ class MsgboxController extends Controller {
         
     }
     
-    public function agreeFirend($sender_id, $send_ip, $receiver_id, $group_id_me, $group_id_you) {
+    public function agreeFirend($sender_id, $send_ip, $group_id_me, $group_id_you) {
         
         //获取接受人ip地址
-        $receiver_ip = cmf_get_current_user()["last_login_ip"];
+        $this->user = cmf_get_current_user();
         
         //获取当前时间
         $nowDate = date('Y-m-d h:i:s', time());
@@ -257,7 +246,7 @@ class MsgboxController extends Controller {
         Db::table('im_msg_box')
         ->where([
             'sender_id' => $sender_id,
-            'receiver_id' => $receiver_id
+            'receiver_id' => $this->user['id']
         ])
         ->update(['agree' => 'y']);
         
@@ -267,14 +256,14 @@ class MsgboxController extends Controller {
             'sender_id' => $sender_id,
             'send_date' => $nowDate,
             'send_ip' => $send_ip,
-            'receiver_id' => $receiver_id,
+            'receiver_id' => $this->user['id'],
             'content' => '我们已经成为好友啦，赶快开始聊天吧！'
         ]);
         $last_reads_me = Db::table('im_chat_user')
         ->insertGetId([
-            'sender_id' => $receiver_id,
+            'sender_id' => $this->user['id'],
             'send_date' => $nowDate,
-            'send_ip' => $receiver_ip,
+            'send_ip' => $this->user['last_login_ip'],
             'receiver_id' => $sender_id,
             'content' => '我们已经成为好友啦，赶快开始聊天吧！'
         ]);
@@ -283,7 +272,7 @@ class MsgboxController extends Controller {
         Db::table('im_friends')
         ->insert([
             'user_id' => $sender_id,
-            'contact_id' => $receiver_id,
+            'contact_id' => $this->user['id'],
             'group_id' => $group_id_you,
             'contact_date' => $nowDate,
             'last_active_time' => $nowDate,
@@ -292,7 +281,7 @@ class MsgboxController extends Controller {
         ]);
         Db::table('im_friends')
         ->insert([
-            'user_id' => $receiver_id,
+            'user_id' => $this->user['id'],
             'contact_id' => $sender_id,
             'group_id' => $group_id_me,
             'contact_date' => $nowDate,

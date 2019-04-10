@@ -201,8 +201,7 @@ layui.use(['layim', 'flow'], function(){
                 	  url: '../Msgbox/agreeFriends',
                 	  data: {
                 		  sender_id: sender_id,
-                		  receiver_id: receiver_id,
-                		  send_ip: user.last_login_ip,
+                		  send_ip: jilu.send_ip,
                 		  group_id_me: group,
                 		  group_id_you: jilu.sender_friendgroup_id
                 	  },
@@ -254,9 +253,8 @@ layui.use(['layim', 'flow'], function(){
         	  data: {
         		  sender_id: sender_id,
         		  group_id: jilu.group_id,
-        		  send_ip: user.last_login_ip,
-        		  sender_nickname: user.user_nickname,
-        		  receiver_id: receiver_id
+        		  send_ip: jilu.send_ip,
+        		  sender_nickname: user.user_nickname
         	  },
         	  dataType: 'json',
         	  success: function(res){
@@ -321,8 +319,7 @@ layui.use(['layim', 'flow'], function(){
         $.ajax({
         	url: '../Msgbox/refuse',
         	data: {
-        		sender_id: sender_id, //对方用户ID
-            	receiver_id: receiver_id //我的id
+        		sender_id: sender_id //对方用户ID
         	},
         	dataType: 'json',
         	success: function(res){
