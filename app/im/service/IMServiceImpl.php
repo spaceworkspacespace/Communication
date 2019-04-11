@@ -77,7 +77,6 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     public function init($userId)
     {
         $friend = $this->findOwnFriends($userId);
-        
         if (!count($friend)) $this->createFriendGroup($userId, "我的好友"); 
         return [
             "mine"=>$this->getUserById($userId)[0],
@@ -90,14 +89,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     {
         // return model("user_entire")::contacts($userId);
 //         return UserModel::contacts($userId);
-
-        $friend = model("friends")->getFriendAndGroup($userId);
-        
-        foreach ($friend[0]['list'] as $key => $value) {
-            $friend[0]['list'][$key]['avatar'] = cmf_get_user_avatar_url($friend[0]['list'][$key]['avatar']);
-        }
-        
-        return $friend;
+        return model("friends")->getFriendAndGroup($userId);
     }
 
     
@@ -352,7 +344,12 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     
     public function hiddenMessage($userId, $cid, $type) {
         try {
-            $result = model("chat_user")->setVisible($userId, $cid, 0);
+            $result = null;
+            switch($type) {
+                case static::CHAT_FRIEND:
+                    $result = model("chat_user")->setVisible($userId, $cid, 0);
+                    break;
+            }
 //             var_dump($result);
             im_log("debug", "隐藏信息. user: $userId, cid: $cid, result: ", $result);
         } catch(\Exception $e) {
