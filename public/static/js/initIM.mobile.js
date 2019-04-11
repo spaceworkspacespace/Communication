@@ -59,6 +59,12 @@ var initIM = (function ($, _) {
 				members: { url: urls.members },
 				uploadImage: { url: urls.uploadImage },
 				uploadFile: { url: urls.uploadFile },
+				// moreList: [{
+				// 	alias: "find",
+				// 	title: "发现",
+				// 	iconUnicode: '&#xe628;', //图标字体的unicode，可不填
+				// 	iconClass: '' //图标字体的class类名
+				// }],
 				copyright: true,
 			});
 
@@ -76,6 +82,22 @@ var initIM = (function ($, _) {
 						layer.msg("请求错误, 请稍后重试~");
 					}
 				});
+			});
+
+			layim.on("newFriend", function () {
+				// $.ajax({
+				// 	url: "/im/index/msgbox",
+				// 	method: "GET",
+				// 	success: function(data, status, xhr) {
+				// 		console.log(data)
+				// 		layim.panel({
+				// 			title: "新的朋友",
+				// 			tpl: data,
+				// 			data: {}
+				// 		});
+				// 	}
+				// });
+				location.href = "/im/index/find";
 			});
 
 			// 监听发送消息
@@ -103,6 +125,14 @@ var initIM = (function ($, _) {
 				});
 			});
 
+			layim.on("moreList", function (ex) {
+				switch (ex.alias) {
+					case "find":
+						location.href = "/im/index/find";
+						break;
+				}
+			});
+
 			// var $id = {:cmf_get_current_user_id()};
 			client.onopen = function (event) {
 				layer.msg("连接可用");
@@ -128,7 +158,7 @@ var initIM = (function ($, _) {
 			}
 
 			// 有新的请求信息
-			client.onxask = function (data) { layim.msgbox(data.msgCount); }
+			client.onxask = function (data) { layim.showNew('Friend', true); }
 
 			// 有新的添加命令
 			client.onxadd = function (data) {
@@ -160,13 +190,15 @@ var initIM = (function ($, _) {
 					// 删除本地数据
 					try {
 						var cache = layui.mobile.layim.cache();
-						var local = layui.data('layim-mobile')[cache.mine.id];
-						delete local.chatlog;
+						if (cache) {
+							var local = layui.data('layim-mobile')[cache.mine.id];
+							delete local.chatlog;
 
-						layui.data('layim-mobile', {
-							key: cache.mine.id,
-							value: local
-						});
+							layui.data('layim-mobile', {
+								key: cache.mine.id,
+								value: local
+							});
+						}
 					} catch (e) {
 						console.error(e);
 					}

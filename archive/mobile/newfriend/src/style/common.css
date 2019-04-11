@@ -1,0 +1,22 @@
+.x-flex {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    flex-grow: 1;
+    flex: 0;
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
+.x-rotate {
+    animation: x-rotate 1.5s infinite linear;
+}
+
+@keyframes x-rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}

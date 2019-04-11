@@ -10,9 +10,10 @@
 
 /*
 
+!/.gitignore
 !/app/im
 !/app/config.php
-!/.gitignore
+!/archive
 !/composer.json
 !/public/themes/simpleboot3/im
 !/public/static/js/initIM.js

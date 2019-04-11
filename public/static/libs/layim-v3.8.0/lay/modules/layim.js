@@ -328,8 +328,13 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
       ,'{{ d.username||"佚名" }}<i>{{ layui.data.date(d.timestamp) }}</i>'
      ,'{{# } }}'
       ,'</cite></div>'
-    ,'<div class="layim-chat-text">',
+    ,'<div class="layim-chat-text" style="position:relative">',
     '<div style="position:absolute;top:0px;right:5px;cursor:pointer;z-index:1000;" class="x-msg-del">x</div>',
+    '<div class="contextmenuul">',
+    '<div class="contextli"><a><span class="layui-icon layui-icon-file"></span>复制</a></div>',
+    '<div class="contextulline"></div>',
+    '<div class="contextli"><a><span class="layui-icon layui-icon-delete"></span>删除</a></div>',
+    '</div>',
     '{{ layui.data.content(d.content||"&nbsp") }}</div>'
   ,'</li>'].join('');
   
@@ -943,12 +948,12 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
       var chatInfo = $(laytpl(elemChatMain).render(data));
       var chatInfoContent = chatInfo.find(".layim-chat-text");
       
-      if (call.chatMsgClick instanceof Array) {
-        for (var i=call.chatMsgClick.length-1; i>=0; i--) {
-          chatInfoContent.on("mousedown", call.chatMsgClick[i]);
-          // chatInfoContent.on("contextmenu", _preventDefaultRightClick);
-        }
-      }
+      // if (call.chatMsgClick instanceof Array) {
+      //   for (var i=call.chatMsgClick.length-1; i>=0; i--) {
+      //     chatInfoContent.on("mousedown", call.chatMsgClick[i]);
+      //     chatInfoContent.on("contextmenu", _preventDefaultRightClick);
+      //   }
+      // }
       
       // console.log(thatChat);
       // 删除按钮事件

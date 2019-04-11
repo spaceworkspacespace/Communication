@@ -33,6 +33,13 @@ class UserController extends Controller {
     }
     
     /**
+     * 获取用户信息
+     */
+    public function getInfo() {
+        $this->error("", "/", cmf_get_current_user(), 0);
+    }
+    
+    /**
      * 更新用户信息
      */
     public function postInfo() {
@@ -47,4 +54,5 @@ class UserController extends Controller {
             $this->success("更新失败 !", "/", null, 0);
         }
     }
+    
 }

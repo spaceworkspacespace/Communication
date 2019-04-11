@@ -4,13 +4,7 @@ namespace app\im\service;
 interface IIMService {
     const SQL_DATE_FORMAT = "Y-m-d H:i:s";
     
-    /**
-     * 创建一个分组
-     * @param mixed $userId 用户 id
-     * @param string $groupName 分组名称
-     * @return \think\Collection 插入的分组信息
-     */
-    public function createFriendGroup($userId, $groupName): array;
+    
     
     /**
      * 通过用户 id 获取用户基本信息等. 为 layerIM 适配的初始化数据.
@@ -76,16 +70,7 @@ interface IIMService {
      */
     public function findGroups($key): array;
     
-    /**
-     * 创建一个群聊
-     * @param mixed $creator 创建者的 id
-     * @param string $groupName 群聊名称
-     * @param string $pic 群聊图片的访问地址
-     * @param string $desc 群聊描述
-     * @return void 
-     * @exception \app\im\exception\OperationFailureException 当创建失败时抛出.
-     */
-    public function createGroup($creator, string $groupName, string $pic, string $desc): void;
+   
     
     /**
      * 添加好友的请求

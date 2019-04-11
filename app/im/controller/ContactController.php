@@ -2,7 +2,6 @@
 namespace app\im\controller;
 
 use think\Request;
-use traits\controller\Jump;
 use app\im\service\IMServiceImpl;
 use think\Controller;
 use app\im\exception\OperationFailureException;
@@ -179,8 +178,25 @@ class ContactController extends Controller
             $this->error("", "/", null, 0);
         } catch (OperationFailureException $e) {
             $msg = $e->getMessage();
+            $this->success($msg, "/", null, 0);
         }
-        $this->success($msg, "/", null, 0);
+        $this->error($msg, "/", null, 0);
+    }
+    
+    /**
+     * 新建一个好友分组
+     * @param mixed $groupname
+     */
+    public function postFriendGroup($groupname) {
+        $msg = "";
+        $data = null;
+        try {
+            $data = $this->service->createFriendGroup(cmf_get_current_user_id(), $groupname);
+        } catch (OperationFailureException $e) {
+            $msg = $e->getMessage();
+            $this->success($msg, "/", null, 0);
+        }
+        $this->error($msg, "/", $data, 0);
     }
     
     /**

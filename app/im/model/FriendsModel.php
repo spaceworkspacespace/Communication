@@ -28,7 +28,7 @@ class FriendsModel extends IMModel {
         $resultSet = $this->getQuery()
             ->alias("f")
             ->field("u.id AS id, u.user_nickname AS username, u.avatar, u.signature AS sign, g.group_name AS groupname, g.id AS groupid")
-            ->join(["im_friend_groups"=>"g"], "f.group_id=g.id", "RIGHT OUTER")
+            ->join(["im_friend_groups"=>"g"], "f.group_id=g.id AND g.user_id=f.user_id", "RIGHT OUTER")
             ->join(["cmf_user"=>"u"], "f.contact_id=u.id", "LEFT OUTER")
             ->where("g.user_id=:id")
             ->bind(["id"=>[$userId, \PDO::PARAM_INT]])

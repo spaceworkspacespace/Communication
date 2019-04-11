@@ -335,9 +335,10 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
     , '<div class="layim-chat-user"><img src="{{ d.avatar }}"><cite>'
     , '{{ d.username||"佚名" }}'
     , '</cite></div>'
-    , '<div class="layim-chat-text" style="position:relative">', 
+    , '<div class="layim-chat-text" style="position:relative">',
     '<span style="padding-right:10px">{{ layui.data.content(d.content||"&nbsp;") }}</span>',
-    '<span style="position:absolute;top:0" class="x-msg-del">x</span>',
+    // '<span style="position:absolute;top:0" class="x-msg-del">x</span>',
+    '<div class="mytips">删除</div>',
     '</div>'
     , '</li>'].join('');
 
@@ -612,47 +613,81 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
       ul.append('<li class="layim-chat-system"><span>' + layui.data.date() + '</span></li>');
       sendMessage.time = time;
     }
-    // var liMsg = $(laytpl(elemChatMain).render(data));
-    //得到layim-chat-text JQ对象
-    // var litterli = liMsg.children('.layim-chat-text');
-    // var timeOutEvent = 0;
-    // litterli.on({
-    //   touchstart: function (e) {
-    //     timeOutEvent = setTimeout(function () {
-    //       //此处为长按事件-----在此显示遮罩层及删除按钮
-    //       console.log("123123");
-    //     }, 1000);
-    //   },
-    //   touchmove: function () {
-    //     clearTimeout(timeOutEvent);
-    //     timeOutEvent = 0;
-    //     e.preventDefault();
-    //   },
-    //   touchend: function (e) {
-    //     clearTimeout(timeOutEvent);
-    //     if (timeOutEvent != 0) {//点击
-    //       //此处为点击事件----在此处添加跳转详情页
-    //     }
-    //     return false;
-    //   }
-    // })
-    // console.log("dddddd", litterli);
 
     var chatInfo = $(laytpl(elemChatMain).render(data));
     var chatInfoContent = chatInfo.find(".layim-chat-text");
+    var mytips = chatInfoContent.find(".mytips");
+    let timeOutEvent = 0;
+    // 长按显示删除tips;
+    chatInfoContent.on({
+      touchstart: function (e) {
+        timeOutEvent = setTimeout(function () {
+          //此处为长按事件-----在此显示删除按钮
+          console.log("长按了。。。");
+          mytips.show();
+        }, 1000);
+      },
+      touchmove: function (e) {
+        clearTimeout(timeOutEvent);
+        timeOutEvent = 0;
+        e.preventDefault();
+      },
+      touchend: function (e) {
+        clearTimeout(timeOutEvent);
+        // if (timeOutEvent != 0) { //点击
+        //   //此处为点击事件
+        // }
+        return false;
+      }
+    })
+    // 删除按钮
+    mytips.on({
+      touchstart: function (e) {
+      },
+      touchmove: function () {
+        clearTimeout(timeOutEvent);
+        e.preventDefault();
+      },
+      touchend: function (e) {
+        clearTimeout(timeOutEvent);
+        if (timeOutEvent != 0) {//点击
+          //点击事件处理
+          console.log("删除");
+          if (call.chatMsgDelete instanceof Array) {
+            for (var i = call.chatMsgDelete.length - 1; i >= 0; i--) {
+              // 传递消息 id 和聊天类型出去
+              var cid = chatInfo.attr("data-cid");
+              call.chatMsgDelete[i](cid, thatChat.data.type,
+                function () { // 删除的回调
+                  _delChatMessage(cid, thatChat.data.type + thatChat.data.id, chatInfo);
+                });
+            }
+            mytips.hide();
+          }
 
-    if (call.chatMsgDelete instanceof Array) { 
-      chatInfoContent.find(".x-msg-del").on("click", function(event) {
-        for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
-          // 传递消息 id 和聊天类型出去
-          var cid = chatInfo.attr("data-cid");
-          call.chatMsgDelete[i](cid, thatChat.data.type, 
-            function() { // 删除的回调
-              _delChatMessage(cid, thatChat.data.type+thatChat.data.id, chatInfo);
-            });
         }
-      });
-    }
+        return false;
+      }
+    });
+    // 点击其他地方可取消删除按钮
+    $(document).on('click',function(e){
+      var target = e.target;
+      if(mytips !== target){
+        mytips.hide();
+      }
+    })
+    // if (call.chatMsgDelete instanceof Array) {
+    // chatInfoContent.find(".x-msg-del").on("click", function(event) {
+    //   for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
+    //     // 传递消息 id 和聊天类型出去
+    //     var cid = chatInfo.attr("data-cid");
+    //     call.chatMsgDelete[i](cid, thatChat.data.type, 
+    //       function() { // 删除的回调
+    //         _delChatMessage(cid, thatChat.data.type+thatChat.data.id, chatInfo);
+    //       });
+    //   }
+    // });
+    // }
 
     ul.append(chatInfo);
 
@@ -671,7 +706,7 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
     pushChatlog(message);
 
     layui.each(call.sendMessage, function (index, item) {
-      if(item) item(param, function(cid) {
+      if (item) item(param, function (cid) {
         // 设置 cid
         chatInfo.attr("data-cid", cid);
         // 更新到缓存
@@ -680,12 +715,12 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
         var thisChatlog = local.chatlog[message.type + message.id];
         if (thisChatlog instanceof Array) {
           var item = null;
-          for (var i=thisChatlog.length-1; i>=0; i++) {
+          for (var i = thisChatlog.length - 1; i >= 0; i++) {
             item = thisChatlog[i];
-            
-            if((item.timestamp === message.timestamp && 
+
+            if ((item.timestamp === message.timestamp &&
               item.type === message.type &&
-              item.id === message.id && 
+              item.id === message.id &&
               item.content === message.content)) {
               // 更新 cid
               item.cid = cid;
@@ -792,14 +827,14 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
 
       var chatInfo = $(laytpl(elemChatMain).render(data));
       var chatInfoContent = chatInfo.find(".layim-chat-text");
-      if (call.chatMsgDelete instanceof Array) { 
-        chatInfoContent.find(".x-msg-del").on("click", function(event) {
-          for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
+      if (call.chatMsgDelete instanceof Array) {
+        chatInfoContent.find(".x-msg-del").on("click", function (event) {
+          for (var i = call.chatMsgDelete.length - 1; i >= 0; i--) {
             // 传递消息 id 和聊天类型出去
             var cid = chatInfo.attr("data-cid");
-            call.chatMsgDelete[i](cid, thatChat.data.type, 
-              function() { // 删除的回调
-                _delChatMessage(cid, thatChat.data.type+data.id, chatInfo);
+            call.chatMsgDelete[i](cid, thatChat.data.type,
+              function () { // 删除的回调
+                _delChatMessage(cid, thatChat.data.type + data.id, chatInfo);
               });
           }
         });
@@ -844,14 +879,14 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
       // ul.append(laytpl(elemChatMain).render(item));
       var chatInfo = $(laytpl(elemChatMain).render(item));
       var chatInfoContent = chatInfo.find(".layim-chat-text");
-      if (call.chatMsgDelete instanceof Array) { 
-        chatInfoContent.find(".x-msg-del").on("click", function(event) {
-          for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
+      if (call.chatMsgDelete instanceof Array) {
+        chatInfoContent.find(".x-msg-del").on("click", function (event) {
+          for (var i = call.chatMsgDelete.length - 1; i >= 0; i--) {
             // 传递消息 id 和聊天类型出去
             var cid = chatInfo.attr("data-cid");
-            call.chatMsgDelete[i](cid, thatChat.data.type, 
-              function() { // 删除的回调
-                _delChatMessage(cid, thatChat.data.type+item.id, chatInfo);
+            call.chatMsgDelete[i](cid, thatChat.data.type,
+              function () { // 删除的回调
+                _delChatMessage(cid, thatChat.data.type + item.id, chatInfo);
               });
           }
         });
@@ -1277,9 +1312,9 @@ layui.define(['laytpl', 'upload-mobile', 'layer-mobile', 'zepto'], function (exp
     // console.log(thisChatlog, msgId, contact);
     if (thisChatlog instanceof Array) {
       var item = null;
-      for (var i=thisChatlog.length-1; i>=0; i++) {
+      for (var i = thisChatlog.length - 1; i >= 0; i++) {
         item = thisChatlog[i];
-        if(item.cid == msgId) {
+        if (item.cid == msgId) {
           // 更新 cid
           thisChatlog.splice(i, 1);
           layui.data('layim-mobile', {

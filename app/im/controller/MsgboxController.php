@@ -1,5 +1,4 @@
-<?php 
-
+<?php
 namespace app\im\controller;
 
 use think\Controller;
@@ -25,11 +24,11 @@ class MsgboxController extends Controller {
             }
         }
     }
-
+    
     /**
      * 跟我接收人id查询消息
-     * @param unknown $page 页码
-     * @param unknown $receiver_id  接收人id
+     * @param mixed $page 页码
+     * @param mixed $receiver_id  接收人id
      * @return string
      */
     public function data($page) {
@@ -53,54 +52,54 @@ class MsgboxController extends Controller {
         ->order('send_date', 'desc')
         ->select()
         ->toArray();
-
+        
         
         //将获取到的时间转换为YMD格式
         $mydata = array_map(function($value) {
             $value['send_date'] = date("Y-m-d",strtotime($value['send_date']));
             return $value;
         }, $mydata);
-        
-        //获取外键
-        foreach ($mydata as $value) {
-            $sender_ids[$i] = $value['sender_id'];
-            $i++;
-        }
-        
-        //根据外键查询发送人信息
-        $udata = Db::table('cmf_user')
-        ->field('id,user_nickname,avatar,last_login_ip,signature,user_email')
-        ->select();
-        
-        //初始化承载外键的数组
-        $sender_ids = [];
-        //初始化循环变量
-        $i = 0;
-        
-        //获取群组id
-        foreach ($mydata as $value) {
-            $sender_ids[$i] = $value['group_id'];
-            $i++;
-        }
-        
-        //根据群组id查询群组信息
-        $groups = Db::table('im_group')
-        ->where('id','in',$sender_ids)
-        ->select();
-        
-        //排序数据
-        $mydata = $this->sortData($mydata);
-        
-        $list = array("code" => 0, "page" => intval($page), "data" => $mydata, "udata" => $udata, "groups" => $groups);
-        //转换为json并返回
-        return json_encode($list);
-        
+            
+            //获取外键
+            foreach ($mydata as $value) {
+                $sender_ids[$i] = $value['sender_id'];
+                $i++;
+            }
+            
+            //根据外键查询发送人信息
+            $udata = Db::table('cmf_user')
+            ->field('id,user_nickname,avatar,last_login_ip,signature,user_email')
+            ->select();
+            
+            //初始化承载外键的数组
+            $sender_ids = [];
+            //初始化循环变量
+            $i = 0;
+            
+            //获取群组id
+            foreach ($mydata as $value) {
+                $sender_ids[$i] = $value['group_id'];
+                $i++;
+            }
+            
+            //根据群组id查询群组信息
+            $groups = Db::table('im_group')
+            ->where('id','in',$sender_ids)
+            ->select();
+            
+            //排序数据
+            $mydata = $this->sortData($mydata);
+            
+            $list = array("code" => 0, "page" => intval($page), "data" => $mydata, "udata" => $udata, "groups" => $groups);
+            //转换为json并返回
+            return json_encode($list);
+            
     }
     
     /**
      * //拒绝接受好友申请
-     * @param unknown $sender_id 请求人id
-     * @param unknown $receiver_id  接收人id
+     * @param mixed $sender_id 请求人id
+     * @param mixed $receiver_id  接收人id
      * @return number|string
      */
     public function refuse($sender_id) {
@@ -119,11 +118,10 @@ class MsgboxController extends Controller {
     
     /**
      * 同意接受好友申请
-     * @param unknown $sender_id 请求人id
-     * @param unknown $send_ip 请求人ip地址
-     * @param unknown $receiver_id 接收人id
-     * @param unknown $group_id_me 接收人设置给请求人的分组id
-     * @param unknown $group_id_you 请求人设置给接收人的分组id
+     * @param mixed $sender_id 请求人id
+     * @param mixed $send_ip 请求人ip地址
+     * @param mixed $group_id_me 接收人设置给请求人的分组id
+     * @param mixed $group_id_you 请求人设置给接收人的分组id
      * @return number|string
      */
     public function agreeFriends($sender_id, $send_ip, $group_id_me, $group_id_you) {
@@ -148,34 +146,33 @@ class MsgboxController extends Controller {
             //判断请求人是否有这个分组,为空返回false
             if(!$groupOfNull){
                 
-               $groupMin = [];
+                $groupMin = [];
                 
-               //查询优先级最小的分组
-               $groupMin = Db::table('im_friend_groups')
-               ->where('user_id', $sender_id)
-               ->min('priority');
-               
-//                $groupMin = Db::table('im_friend_groups')
-//                ->where('user_id', $sender_id)
-//                ->group('priority', 'asc')
-//                ->limit(1)
-//                ->select();
-               
-               $group_id_you = Db::table('im_friend_groups')
-               ->where([
-                   'priority' => $groupMin,
-                   'user_id' => $sender_id
-               ])
-               ->value('id');
-               
-               $this->agreeFirend($sender_id, $send_ip, $this->user['id'], $group_id_me, $group_id_you);
+                //查询优先级最小的分组
+                $groupMin = Db::table('im_friend_groups')
+                ->where('user_id', $sender_id)
+                ->min('priority');
+                
+                //                $groupMin = Db::table('im_friend_groups')
+                //                ->where('user_id', $sender_id)
+                //                ->group('priority', 'asc')
+                //                ->limit(1)
+                //                ->select();
+                
+                $group_id_you = Db::table('im_friend_groups')
+                ->where([
+                    'priority' => $groupMin,
+                    'user_id' => $sender_id
+                ])
+                ->value('id');
+                
+                $this->agreeFirend($sender_id, $send_ip, $group_id_me, $group_id_you);
             }else{
-                $this->agreeFirend($sender_id, $send_ip, $this->user['id'], $group_id_me, $group_id_you);
+                $this->agreeFirend($sender_id, $send_ip, $group_id_me, $group_id_you);
             }
             
             //提交事务
             Db::commit();
-//             Db::rollback();
             $res = 1;
         } catch (\Exception $e) {
             im_log("debug", $e);
@@ -239,7 +236,6 @@ class MsgboxController extends Controller {
             
             //提交事务
             Db::commit();
-//             Db::rollback();
             $res = 1;
         } catch (\Exception $e) {
             im_log("error", $e);
@@ -309,7 +305,7 @@ class MsgboxController extends Controller {
         ]);
     }
     
-    public function sortData($data) {        
+    public function sortData($data) {
         
         //agree不为空
         $datas = [];
@@ -339,7 +335,7 @@ class MsgboxController extends Controller {
     public function addToUid($uid, $data) {
         
         GatewayServiceImpl::addToUid($uid, $data);
-    
+        
     }
     
 }

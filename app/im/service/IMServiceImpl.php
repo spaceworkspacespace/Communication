@@ -18,7 +18,7 @@ use think\db\Connection;
 use think\Collection;
 use app\im\model\RedisModel;
 
-class IMServiceImpl implements IIMService, IChatService, IPushService
+class IMServiceImpl implements IIMService, IChatService, IPushService, IContactService
 {
     private static $instance;
     private static  $query;
@@ -64,7 +64,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
                 "member_count"=>0
             ];
             // 新建分组
-            $friendGroup  ->insert($data, false, true);
+            $data["id"] = $friendGroup  ->insert($data, false, true);
             return $data;
         } catch(OperationFailureException $e) {
             throw $e;
@@ -76,7 +76,7 @@ class IMServiceImpl implements IIMService, IChatService, IPushService
     
     public function init($userId)
     {
-        $friend = $this->findOwnFriends($userId);
+        $friend = $this->getOwnFriendGroups($userId);
         if (!count($friend)) $this->createFriendGroup($userId, "我的好友"); 
         return [
             "mine"=>$this->getUserById($userId)[0],

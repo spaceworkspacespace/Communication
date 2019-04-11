@@ -51,6 +51,9 @@ class IndexController extends HomeBaseController
     
     public function find()
     {
+        if ($this->request->isMobile()) {
+            return $this->fetch("/mobile-find");
+        }
         return $this->fetch("/find");
     }
 
