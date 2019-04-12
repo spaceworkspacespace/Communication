@@ -16,6 +16,34 @@
 			margin: 0;
 			padding: 0;
 		}
+
+		.mytips {
+			display: none;
+			background-color: #1E2021;
+			padding: 8px;
+			width: 30px;
+			text-align: center;
+			position: absolute;
+			top: -40px;
+			right: 0;
+			z-index: 999;
+			border-radius: 3px;
+			box-shadow: 1px 1px 1px rgba(0, 0, 0, .2);
+			color: white;
+			font-size: 13px;
+			line-height: 1.4;
+		}
+
+		.mytips::before {
+			position: absolute;
+			content: '';
+			width: 0;
+			height: 0;
+			border: 6px solid transparent;
+			border-top-color: #1E2021;
+			top: 34px;
+			right: 8px;
+		}
 	</style>
 </head>
 
@@ -35,7 +63,7 @@
 			title: "致尚诚 IM",
 			// 所有功能的接口地址
 			urls: {
-				socket: "ws://192.168.0.80:8282", // Socket 连接地址
+				socket: "{$socket}", // Socket 连接地址
 				init: "__ROOT__/im/index/init", // 获取应用初始数据地址
 				members: "__ROOT__/im/index/getgroup", // 
 				msgbox: "__ROOT__/im/index/msgbox", // 消息盒子地址

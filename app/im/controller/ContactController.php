@@ -31,13 +31,6 @@ class ContactController extends Controller
         
     }
 
-    public function getTest()
-    {
-        im_log("debug", "调用 test 成功.");
-//         $this->service->getGroupByName("3");
-        $this->service->findOwnGroups(1);
-    }
-
     protected function checkUserLogin()
     {
         $isLogin = $this->user && $this->user["id"];

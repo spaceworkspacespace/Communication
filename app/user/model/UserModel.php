@@ -157,13 +157,14 @@ class UserModel extends Model
                 'user_login'      => empty($user['user_login']) ? '' : $user['user_login'],
                 'user_email'      => empty($user['user_email']) ? '' : $user['user_email'],
                 'mobile'          => empty($user['mobile']) ? '' : $user['mobile'],
-                'user_nickname'   => '',
+                'user_nickname'   => empty($user['user_login']) ? '' : $user['user_login'],
                 'user_pass'       => cmf_password($user['user_pass']),
                 'last_login_ip'   => get_client_ip(0, true),
                 'create_time'     => time(),
                 'last_login_time' => time(),
                 'user_status'     => $userStatus,
-                "user_type"       => 2,//会员
+                'user_type'       => 2,//会员
+                'avatar' => 'https://i.loli.net/2019/04/12/5cafffdaed88f.jpg',  //默认头像
             ];
             $userId = Db::name("user")->insertGetId($data);
             $data   = Db::name("user")->where('id', $userId)->find();

@@ -16,6 +16,7 @@ return [
     // gateway 设置
     "gateway" => [
         "remote" => "192.168.0.80:1238",
+        "client_connect" => "ws://192.168.0.80:8080",
         "remote_log_uid" => "socket_log"
     ],
     // 程序的一些配置.

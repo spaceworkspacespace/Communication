@@ -15,6 +15,50 @@
 			margin: 0;
 			padding: 0;
 		}
+
+		.contextmenuul {
+			display: none;
+			position: absolute;
+			top: 40px;
+			right: 0;
+			list-style: none;
+			width: 80px;
+			background: #FFFFFF;
+			overflow: hidden;
+			box-shadow: 1px 1px 5px #DDDDDD;
+			z-index: 99;
+			border: 1px solid #C4C4C4;
+		}
+
+		.contextmenuul .contextli {
+			width: 100%;
+			margin: 0 !important;
+			min-height: 20px !important;
+			padding: 0 !important;
+		}
+
+		.contextmenuul .contextli:hover {
+			background-color: #f3f3f3;
+		}
+
+		.contextmenuul .contextli a {
+			cursor: pointer;
+			display: block;
+			font-size: 13px;
+			padding: 8px;
+			color: #000 !important;
+		}
+
+		.contextmenuul .contextli a span {
+			display: inline-block;
+			width: 25px;
+		}
+
+		.contextulline {
+			width: 100%;
+			height: 1px;
+			background-color: #EDEDED;
+		}
 	</style>
 </head>
 
@@ -35,7 +79,7 @@
 			title: "致尚诚 IM",
 			// 所有功能的接口地址
 			urls: {
-				socket: "ws://192.168.0.80:8282", // Socket 连接地址
+				socket: "{$socket}", // Socket 连接地址
 				init: "__ROOT__/im/index/init", // 获取应用初始数据地址
 				members: "__ROOT__/im/index/getgroup", // 
 				msgbox: "__ROOT__/im/index/msgbox", // 消息盒子地址

@@ -41,9 +41,9 @@ class IndexController extends HomeBaseController
     public function index()
     {
         if ($this->request->isMobile()) {
-            return $this->fetch("/mobile");
+            return $this->fetch("/mobile", ["socket"=>config("gateway.client_connect")]);
         }
-        return $this->fetch("/index", []);
+        return $this->fetch("/index", ["socket"=>config("gateway.client_connect")]);
         // IndexController::$number
         //  self::$number + 1;
         //  return self::$number;
