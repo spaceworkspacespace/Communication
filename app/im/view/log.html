@@ -40,11 +40,11 @@
 			mounted: function () {
 				try {
 					this.socket = new Gateway({
-						url: "ws://192.168.0.80:8282",
+						url: "ws://192.168.0.80:8080",
 						interval: 60
 					});
 					this.socket.onmessage = this.onMessage.bind(this);
-				} catch(e) {
+				} catch (e) {
 					console.error(e);
 				}
 			},
@@ -56,7 +56,9 @@
 					// 所有的日志
 					logs: {},
 					// 当前显示的日志
-					show: []
+					show: [],
+					// 数据量
+					capacity: 1000,
 				};
 			},
 
@@ -139,6 +141,15 @@
 					if (level === this.select ||
 						this.select === "all") {
 						this.show.unshift(message);
+					}
+					// 判断数据量, 避免程序崩溃
+					if (Object.values(this.logs).reduce(function (count, m) { return count + m.length }, 0) > this.capacity) {
+						// 缩减策略是每种类型的日志都清除最旧的 1/3
+						for (var prop of Object.keys(this.logs)) {
+							var dataLen = this.logs[prop].length;
+							this.logs[prop] = this.logs[prop].slice(Math.floor(dataLen / 3));
+						}
+						console.log("清除了一些数据");
 					}
 				}
 			}

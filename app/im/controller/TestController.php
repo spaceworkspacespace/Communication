@@ -21,8 +21,26 @@ class TestController extends Controller {
     {
         phpinfo();
     }
+    
+    public function getQstr() {
+        var_dump($_GET["ary"]);
+    }
+    
+    public function postJson() {
+        var_dump(file_get_contents('php://input'));
+    }
+    
     public function getDb() {
         var_dump(Db::connect(config("database")) === Db::connect(config("database")));
+    }
+    public function getHeader (){
+//         var_dump(getenv("REMOTE_ADDR"));
+//         var_dump(getenv("REMOTE_PORT"));
+        var_dump(request()->url());
+    }
+    public function putT($name, $id=null) {
+        if ($id) return $id;
+        return $name;
     }
     
     public function getReq() {

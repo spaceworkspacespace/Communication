@@ -7,14 +7,20 @@ use GatewayClient\Gateway;
 class InitBehavior {
     public const forceAjaxUrl = [
         "/test/req",
-        ["/im/chat/messagepicture", "POST"],
-        ["/im/chat/messagefile", "POST"],
+        ["/im/comm/picture", "POST"],
+        ["/im/comm/file", "POST"],
     ];
     
 
     public static function appInit(&$params) {
+        session_start();
         static::_decryptBody();
         static::_forceAjax();
+        $_SESSION["x_in_transaction"] = false;
+//         var_dump($_SESSION);
+        // 测试设置跨域头
+//         var_dump($_GET["_origin"]);
+//         header("Access-Control-Allow-Origin:".$_GET["_origin"]);
     }
     
     public static function actionBegin(&$params) {
@@ -98,7 +104,7 @@ class InitBehavior {
 //             var_dump($contentType);  
         if ($encrypted) {
             // 判断 session 获取用户 id.
-            session_start();
+//             session_start();
             if (!isset($_SESSION["think"]["user"])) return; 
             $uid = $_SESSION["think"]["user"]["id"];
             if (!$uid) return;

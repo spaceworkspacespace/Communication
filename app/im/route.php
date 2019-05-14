@@ -6,7 +6,9 @@ Route::group("im", function() {
     // 联系人操作
     Route::controller("contact", "im/contact");
     Route::controller("chat", "im/chat");
+    Route::controller("message", "im/msgbox");
     Route::controller("user", "im/user");
+    Route::controller("comm", "im/comm");
 });
 Route::controller("test", "im/test");
 // Route::any("test", "im/test");

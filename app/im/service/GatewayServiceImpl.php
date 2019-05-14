@@ -6,8 +6,13 @@ use think\Hook;
 use app\im\model\RedisModel;
 use function Qiniu\base64_urlSafeEncode;
 
-class GatewayServiceImpl implements IGatewayService
+class GatewayServiceImpl 
 {
+    public const MESSAGE_TYPE = "SEND";
+    public const ASK_TYPE = "ASK";
+    public const UPDATE_TYPE = "UPDATE";
+    public const ADD_TYPE = "ADD";
+    public const COMMUNICATION_ASK_TYPE = "COMMUNICATION-ASK";
 
     // private static $_instance = null;
     // private $config = null;
@@ -117,6 +122,7 @@ class GatewayServiceImpl implements IGatewayService
         $data = [
             "id" => "u-$uid",
             "payload" => [
+                "id"=>$clientId,
                 "type" => self::MESSAGE_TYPE,
                 "data" => $data
             ],
@@ -246,6 +252,54 @@ class GatewayServiceImpl implements IGatewayService
         Gateway::sendToUid($uid, $data);
     }
 
+    public static function sendToClient($clientId, $data, $type, $cids=[], $resend=3) {
+        $uid = Gateway::getUidByClientId($clientId);
+        $sign = base64_urlSafeEncode(implode([$clientId, lcg_value(), time()]));
+        
+        $data = [
+            "id" => "u-$uid",
+            "payload" => [
+                "id"=>$clientId,
+                "type" => $type,
+                "data" => $data
+            ],
+            "sign"=>$sign
+        ];
+        
+        $rawData = $data;
+        
+        Hook::listen("gateway_send", $data);
+        Gateway::sendToClient($clientId, $data);
+        
+        $addition = [
+            // 发送时的参数
+            "id"=>$clientId,
+            "data" => $data,
+            // 其他描述信息
+            "cids"=>$cids,
+            "mark"=>$sign,
+            "rawdata"=>$rawData
+        ];
+        
+        static::cacheMessage($addition);
+    }
+    
+    public static function sendToUser($userId, $data, $type, $cids = [], $resend = 3)
+    {
+        $clientIds = Gateway::getClientIdByUid($userId);
+        foreach ($clientIds as $id) {
+            static::msgToClient($id, $data, $type, $cids = [], $resend = 3);
+        }
+    }
+    
+    public static function sendToGroup($groupId, $data, $type, $cids = [], $resend = 3)
+    {
+        $userIds = model("groups")->getUserIdInGroup($groupId);
+        foreach($userIds as $userId) {
+            static::sendToUser($userId, $data, $type, $cids = [], $resend = 3);
+        }
+    }
+    
     public static function updateToUid($uid, $data): void
     {
         $data = [
@@ -258,5 +312,4 @@ class GatewayServiceImpl implements IGatewayService
         Hook::listen("gateway_send", $data);
         Gateway::sendToUid($uid, $data);
     }
-
 }

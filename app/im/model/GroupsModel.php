@@ -12,6 +12,21 @@ class GroupsModel extends IMModel {
             ->select();
     }
     
+    /**
+     * 获取用户所有的群聊的 id
+     * @param mixed $userId
+     * @return Array<number> 群聊的 id 的数组
+     */
+    public function getGroupIds($userId): array {
+        $result = model("groups")->getQuery()
+            ->field("contact_id")
+            ->where("user_id=:uid")
+            ->bind(["uid"=>[$userId, \PDO::PARAM_INT]])
+            ->select()
+            ->toArray();
+        return array_column($result, "contact_id");
+    }
+    
     public function getUserIdInGroup($giu) {
         $resultSet = $this->getQuery()
             ->field("user_id")

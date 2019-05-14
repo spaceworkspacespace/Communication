@@ -320,23 +320,38 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
   ,'</div>'].join('');
   
   //聊天内容列表模版
+  // change
+  // var elemChatMain = ['<li {{ d.mine ? "class=layim-chat-mine" : "" }} {{# if(d.cid){ }}data-cid="{{d.cid}}"{{# } }}>'
+  //   ,'<div class="layim-chat-user"><img src="{{ d.avatar }}"><cite>'
+  //   ,'{{# if(d.mine){ }}'
+  //     ,'<i>{{ layui.data.date(d.timestamp) }}</i>{{ d.username||"佚名" }}'
+  //    ,'{{# } else { }}'
+  //     ,'{{ d.username||"佚名" }}<i>{{ layui.data.date(d.timestamp) }}</i>'
+  //    ,'{{# } }}'
+  //     ,'</cite></div>'
+  //   ,'<div class="layim-chat-text">{{ layui.data.content(d.content||"&nbsp") }}</div>'
+  // ,'</li>'].join('');
+  // to
   var elemChatMain = ['<li {{ d.mine ? "class=layim-chat-mine" : "" }} {{# if(d.cid){ }}data-cid="{{d.cid}}"{{# } }}>'
-    ,'<div class="layim-chat-user"><img src="{{ d.avatar }}"><cite>'
-    ,'{{# if(d.mine){ }}'
-      ,'<i>{{ layui.data.date(d.timestamp) }}</i>{{ d.username||"佚名" }}'
-     ,'{{# } else { }}'
-      ,'{{ d.username||"佚名" }}<i>{{ layui.data.date(d.timestamp) }}</i>'
-     ,'{{# } }}'
-      ,'</cite></div>'
-    ,'<div class="layim-chat-text" style="position:relative">',
-    '<div style="position:absolute;top:0px;right:5px;cursor:pointer;z-index:1000;" class="x-msg-del">x</div>',
-    '<div class="contextmenuul">',
-    '<div class="contextli"><a><span class="layui-icon layui-icon-file"></span>复制</a></div>',
-    '<div class="contextulline"></div>',
-    '<div class="contextli"><a><span class="layui-icon layui-icon-delete"></span>删除</a></div>',
-    '</div>',
-    '{{ layui.data.content(d.content||"&nbsp") }}</div>'
-  ,'</li>'].join('');
+  ,'<div class="layim-chat-user"><img src="{{ d.avatar }}"><cite>'
+  ,'{{# if(d.mine){ }}'
+    ,'<i>{{ layui.data.date(d.timestamp) }}</i>{{ d.username||"佚名" }}'
+   ,'{{# } else { }}'
+    ,'{{ d.username||"佚名" }}<i>{{ layui.data.date(d.timestamp) }}</i>'
+   ,'{{# } }}'
+    ,'</cite></div>'
+  ,'<div class="layim-chat-text" style="position:relative;max-width: 350px;">',
+  '<img class="messagefail_img" src="https://i.loli.net/2019/04/12/5cb04b95be706.png" />',
+  '<div {{ d.type != "group"? "": "style=display:none;" }} class="x-msg-del">x</div>',
+  '<div class="contextmenuul">',
+  '<div class="contextli"><a><span class="layui-icon layui-icon-file"></span>复制</a></div>',
+  '<div class="contextulline"></div>',
+  '<div class="contextli"><a><span class="layui-icon layui-icon-delete"></span>删除</a></div>',
+  '</div>',
+  '{{ layui.data.content(d.content||"&nbsp") }}</div>',
+  // '<div style="display:flex;flex-direction:column;align-items:center" ><div style="background-color:#DADADA;padding:10px;font-size: 13px;color: white;margin-top:25px">消息发送失败，请稍后重试</div></div>'
+,'</li>'].join('');
+// end
   
   var elemChatList = '<li class="layim-{{ d.data.type }}{{ d.data.id }} layim-chatlist-{{ d.data.type }}{{ d.data.id }} layim-this" layim-event="tabChat"><img src="{{ d.data.avatar }}"><span>{{ d.data.name||"佚名" }}</span>{{# if(!d.base.brief){ }}<i class="layui-icon" layim-event="closeChat">&#x1007;</i>{{# } }}</li>';
   
@@ -944,35 +959,21 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
       if(data.content.length > maxLength){
         return layer.msg('内容最长不能超过'+ maxLength +'个字符')
       }
-      // 在追加到 DOM 节点之前添加鼠标事件
-      var chatInfo = $(laytpl(elemChatMain).render(data));
-      var chatInfoContent = chatInfo.find(".layim-chat-text");
-      
-      // if (call.chatMsgClick instanceof Array) {
-      //   for (var i=call.chatMsgClick.length-1; i>=0; i--) {
-      //     chatInfoContent.on("mousedown", call.chatMsgClick[i]);
-      //     chatInfoContent.on("contextmenu", _preventDefaultRightClick);
-      //   }
-      // }
-      
-      // console.log(thatChat);
-      // 删除按钮事件
-      if (call.chatMsgDelete instanceof Array) { 
-        chatInfoContent.find(".x-msg-del").on("click", function(event) {
-          for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
-            // 传递消息 id 和聊天类型出去
-            var cid = chatInfo.attr("data-cid");
-            call.chatMsgDelete[i](cid, thatChat.data.type, 
-              function() { // 删除的回调
-                _delChatMessage(cid, thatChat.data.type+thatChat.data.id, chatInfo);
-              });
+      // change
+      // ul.append(laytpl(elemChatMain).render(data));
+      // to
+      // 调用发送前的回调
+      var chatMessage = $(laytpl(elemChatMain).render(data));
+      if (call.beforeSendMessage instanceof Array) {
+        for (var i=0; i<call.beforeSendMessage.length; i++) {
+          // 如果此回调返回值为 false, 表示此消息不发送
+          if (!call.beforeSendMessage[i](chatMessage, thatChat)) {
+            return;
           }
-        });
+        }
       }
-
-      // 追加消息到聊天面板
-      ul.append(chatInfo);
-      
+      ul.append(chatMessage);
+      // end
       var param = {
         mine: data
         ,to: thatChat.data
@@ -988,43 +989,15 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
       pushChatlog(message);
       
       layui.each(call.sendMessage, function(index, item){
-        // 这里更改了调用方式
-        if(item) item(param, function(cid) {
-          // 设置 cid
-          chatInfo.attr("data-cid", cid);
-          // 更新到缓存
-          var local = layui.data('layim')[cache.mine.id] || {};
-          local.chatlog = local.chatlog || {};
-          var thisChatlog = local.chatlog[message.type + message.id];
-          if (thisChatlog instanceof Array) {
-            var item = null;
-            for (var i=thisChatlog.length-1; i>=0; i++) {
-              item = thisChatlog[i];
-              
-              if((item.timestamp === message.timestamp && 
-                item.type === message.type &&
-                item.id === message.id && 
-                item.content === message.content)) {
-                // 更新 cid
-                item.cid = cid;
-                layui.data('layim', {
-                  key: cache.mine.id,
-                  value: local
-                });
-                break;
-              }
-            }
-          }
-        });
-
-        // item && item.apply(chatInfo, param);
+        // change
         // item && item(param);
+        // to
+        item && item(param, chatMessage);
+        // end
       });
     }
     chatListMore();
     thatChat.textarea.val('').focus();
-
-    
   };
   
   //桌面消息提醒
@@ -1140,7 +1113,15 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
     
     //接受到的消息不在当前Tab
     var thatChat = thisChat();
+    // addition
+    // 添加变量, 标记新消息是否在当前窗口
+    var isActive = true;
+    // end
     if(thatChat.data.type + thatChat.data.id !== data.type + data.id){
+      // addition
+      // 赋值
+      isActive = false;
+      // end
       elem.addClass('layui-anim layer-anim-06');
       setTimeout(function(){
         elem.removeClass('layui-anim layer-anim-06')
@@ -1156,25 +1137,17 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
         ul.append('<li class="layim-chat-system"><span>'+ data.content +'</span></li>');
       }
     } else if(data.content.replace(/\s/g, '') !== ''){
-      // 修改
+      // change
       // ul.append(laytpl(elemChatMain).render(data));
-      // 添加删除调用
-      var chatInfo = $(laytpl(elemChatMain).render(data));
-      var chatInfoContent = chatInfo.find(".layim-chat-text");
-      if (call.chatMsgDelete instanceof Array) { 
-        chatInfoContent.find(".x-msg-del").on("click", function(event) {
-          for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
-            // 传递消息 id 和聊天类型出去
-            var cid = chatInfo.attr("data-cid");
-            call.chatMsgDelete[i](cid, thatChat.data.type, 
-              function() { // 删除的回调
-                _delChatMessage(cid, thatChat.data.type+data.id, chatInfo);
-              });
-          }
-        });
+      // to
+      var chatMessage = $(laytpl(elemChatMain).render(data));
+      if (call.afterGetMessage instanceof Array) {
+        for (var i=0; i<call.afterGetMessage.length; i++) {
+          call.afterGetMessage[i](chatMessage, isActive, thatChat, data);
+        }
       }
-
-      ul.append(chatInfo);
+      ul.append(chatMessage);
+      // end
     }
     
     chatListMore();
@@ -1223,23 +1196,17 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
     ,thatChat = thisChat(), chatlog = local.chatlog || {}
     ,ul = thatChat.elem.find('.layim-chat-main ul');
     layui.each(chatlog[thatChat.data.type + thatChat.data.id], function(index, item){
-      var chatInfo = $(laytpl(elemChatMain).render(item));
-      var chatInfoContent = chatInfo.find(".layim-chat-text");
-      // 删除按钮事件
-      if (call.chatMsgDelete instanceof Array) { 
-        chatInfoContent.find(".x-msg-del").on("click", function(event) {
-          for (var i=call.chatMsgDelete.length-1; i>=0; i--) {
-            // 传递消息 id 和聊天类型出去
-            var cid = chatInfo.attr("data-cid");
-            call.chatMsgDelete[i](cid, thatChat.data.type, 
-              function() { // 删除的回调
-                _delChatMessage(cid, thatChat.data.type+thatChat.data.id, chatInfo);
-              });
-          }
-        });
+      // change
+      // ul.append(laytpl(elemChatMain).render(item));
+      // to
+      var chatMessage = $(laytpl(elemChatMain).render(item));
+      if (call.afterGetMessage instanceof Array) {
+        for (var i=0; i<call.afterGetMessage.length; i++) {
+          call.afterGetMessage[i](chatMessage, true, thatChat, item);
+        }
       }
-      // console.log(chatInfo)
-      ul.append(chatInfo);
+      ul.append(chatMessage);
+      // end
     });
     chatListMore();
   };
@@ -1954,39 +1921,7 @@ layui.define(['layer', 'laytpl', 'upload'], function(exports){
     }
     
   };
-
-  // 清除右键的浏览器默认菜单
-  function _preventDefaultRightClick(event) {
-    if (!event || event.type !== "contextmenu" || event.button !== 2) return;
-    event.preventDefault();
-  }
-
-  // 删除一条消息记录
-  function _delChatMessage(msgId, contact, jQelm) {
-    // 从 DOM 中移除
-    jQelm.remove();
-    // 更新到缓存
-    var local = layui.data('layim')[cache.mine.id] || {};
-    local.chatlog = local.chatlog || {};
-    var thisChatlog = local.chatlog[contact];
-    // console.log(thisChatlog, msgId, contact);
-    if (thisChatlog instanceof Array) {
-      var item = null;
-      for (var i=thisChatlog.length-1; i>=0; i++) {
-        item = thisChatlog[i];
-        if(item.cid == msgId) {
-          // 更新 cid
-          thisChatlog.splice(i, 1);
-          layui.data('layim', {
-            key: cache.mine.id,
-            value: local
-          });
-          break;
-        }
-      }
-    }
-  }
-
+  
   //暴露接口
   exports('layim', new LAYIM());
 

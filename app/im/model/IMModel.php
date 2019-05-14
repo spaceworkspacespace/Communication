@@ -8,4 +8,5 @@ class IMModel extends Model {
     protected $connection = [
         'prefix' => 'im_'
     ];
+    
 }

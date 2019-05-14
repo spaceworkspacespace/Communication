@@ -106,6 +106,31 @@ function array_key_replace(&$ary, $old, $new=null) {
     return $failure;
 }
 
+// 只是会覆盖原来的值
+function array_key_replace_force(&$ary, $old, $new=null) {
+    // 替换失败的键名的数组
+    $failure = [];
+    if (is_array($old)) { // 批量替换
+        foreach ($old as $o => $n) {
+            if(!array_key_exists($o, $ary)) array_push($failure, $o);
+                else {
+                    $ary[$n] = $ary[$o];
+                    unset($ary[$o]);
+                }
+        }
+    } else if(is_string($new) || // 单个替换
+        is_numeric($new)){
+            if(!array_key_exists($old, $ary)) array_push($failure, $old);
+                else {
+                    $ary[$new] = $ary[$old];
+                    unset($ary[$old]);
+                }
+    } else {
+        array_push($failure, $old);
+    }
+    return $failure;
+}
+
 /**
  * 从数组中选取指定的索引组成新数组. 方法不会改变原数组.
  * @param array $ary 数组
@@ -129,6 +154,9 @@ function array_index_pick(array $ary, ...$indexes): array {
  * @return array
  */
 function array_index_copy(array $source, array &$dest, ...$indexes) {
+    if (count($indexes) == 0) return;
+    if (is_array($indexes[0])) $indexes = $indexes[0];
+    
     foreach($indexes as $index) {
         if (array_key_exists($index, $source)) {
             $dest[$index] = $source[$index];

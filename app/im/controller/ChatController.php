@@ -8,18 +8,18 @@ use app\im\service\IMServiceImpl;
 use app\im\service\GatewayServiceImpl;
 use GatewayClient\Gateway;
 use app\im\service\IChatService;
+use think\Db;
+use app\im\service\SingletonServiceFactory;
 
 class ChatController extends Controller{
     protected $beforeActionList = [
         "checkUserLogin"
     ];
     
-    private $service;
     private $userId;
     
     public function _initialize() {
             parent::_initialize();
-            $this->service = IMServiceImpl::getInstance();
             $this->userId = cmf_get_current_user_id();
     }
     
@@ -30,7 +30,7 @@ class ChatController extends Controller{
         
         if (!$isLogin) {
             if ($this->request->isAjax()) {
-                $this->error("您尚未登录", cmf_url("user/Login/index"));
+                $this->success("您尚未登录", cmf_url("user/Login/index"));
             } else {
                 $this->redirect(cmf_url("user/Login/index"));
             }
@@ -44,7 +44,8 @@ class ChatController extends Controller{
         $msg = "";
         $data = null;
         try {
-            $this->service->hiddenMessage(cmf_get_current_user_id(), $cid, $type !== "friend"? IChatService::CHAT_GROUP:  IChatService::CHAT_FRIEND);
+            SingletonServiceFactory::getChatService()
+                ->hiddenMessage(cmf_get_current_user_id(), $cid, $type !== "friend"? IChatService::CHAT_GROUP:  IChatService::CHAT_FRIEND);
             $msg = "删除成功";
         } catch(OperationFailureException $e) {
             $msg = $e->getMessage();
@@ -64,16 +65,18 @@ class ChatController extends Controller{
         $data = null;
         $pageNo = isset($_GET["no"])? $_GET["no"]: 0;
         $pageSize = isset($_GET["size"])? $_GET["size"]: 100;
+        
         try {
+            $service = SingletonServiceFactory::getChatService();
             if (trim($type) != "friend") {
                 $data = [
                     "id"=> $this->userId,
-                    "records"=>$this->service->readChatGroup($id, $pageNo, $pageSize)->toArray(),
+                    "records"=>$service->readChatGroup($id, $pageNo, $pageSize)->toArray(),
                 ];
             } else {
                 $data = [
                     "id"=> $this->userId,
-                    "records"=>$this->service->readChatUser($this->userId, $id, $pageNo, $pageSize)->toArray()
+                    "records"=>$service->readChatUser($this->userId, $id, $pageNo, $pageSize)->toArray()
                 ];
             }
             $this->error($msg, "/", $data, 0);
@@ -81,6 +84,73 @@ class ChatController extends Controller{
             $msg = $e->getMessage();
         }
         $this->success($msg, "/", $data, 0);
+    }
+    
+    /**
+     * 获取消息
+     * @param int $type 会话的类型 friend | group
+     * @param int $id 用户id或群聊id
+     * @param int $no 页码
+     * @param int $count 页数
+     * @param boolean $separately
+     */
+    public function getMessage($type = null, $id = null, $no = 1, $count = 50, $separately = true) {
+        $message = "";
+        $reData = [];
+        $failure = false;
+        // $data = $this->getMessages($type, $id, $separately, $no, $count);
+        
+        try {
+            if ($type != null ){
+                $type = $type != "group"? IChatService::CHAT_FRIEND: IChatService::CHAT_GROUP;
+            }
+                
+            $reData = SingletonServiceFactory::getChatService()->getMessage(
+                $this->userId,
+                $no,
+                $count,
+                $type,
+                $id);
+        } catch(OperationFailureException $e) {
+            $failure = true;
+            $message = $e->getMessage();
+        }
+        if ($failure) {
+            $this->success($message, "/", $reData, 0);
+        } else {
+            $this->error('', '/', $reData, 0);
+        }
+    }
+    
+    public function postCall($stage=null, 
+        $id=null, $chatType=null, $type=null,
+        $sign=null, $unread=null, $replay=null,
+        $description=null, $call=null) {
+        $failure = false;
+        $message = "";
+        $data = [];
+        $chatService = SingletonServiceFactory::getChatService();
+        try {
+            // 请求通话
+            if ($stage == null) {
+                if (!is_string($chatType) || is_null($id) || !is_string($type)) {
+                    throw new OperationFailureException("聊天对象未确定.");
+                }
+                switch($chatType) {
+                    case "group":
+                        $chatService->requestCallWithGroup($this->userId, $id, $type);
+                        break;
+                    case "friend":
+                        $chatService->requestCallWithFriend($this->userId, $id, $type);
+                        break;
+                    default:
+                        throw new OperationFailureException("聊天对象未确定.");
+                }
+            }
+        } catch (OperationFailureException $e) {
+            $message = $e->getMessage();
+            $failure = true;
+        }
     }
     
     /**
@@ -92,82 +162,122 @@ class ChatController extends Controller{
     public function postMessage($id, $type, $content){
         $msg = "";
         // im_log("debug", "新的消息 $id $type $content");
-        $msgId=null;
+        $reData=null;
+        $service = SingletonServiceFactory::getChatService();
         try {
             switch(trim($type)) {
                 case "friend":
-                    $msgId = $this->service->sendToUser($this->userId, $id, $content, $this->request->ip());
+                    $reData = $service->sendToUser($this->userId, $id, $content, $this->request->ip());
                     break;
                 case "group":
-                    $msgId = $this->service->sendToGroup($this->userId, $id, $content, $this->request->ip());
+                    $reData = $service->sendToGroup($this->userId, $id, $content, $this->request->ip());
                     break;
             }
         } catch (OperationFailureException $e) {
             $msg = $e->getMessage();
             $this->success($msg, "/", null, 0);
         }
-        $this->error($msg, "/", ["cid"=> $msgId],0);
+        $this->error($msg, "/", $reData,0);
     }
     
-    /**
-     * 聊天图片, 群组和用户的.
-     * @param mixed $file
-     */
-    public function postMessagePicture()
-    {
-        im_log("debug", $_POST["_ajax"]);
-        $file = $this->request->file("file");
-        if (! $file) {
-            $this->success("未选择任何文件.", "/", null, 0);
-            return;
-        }
-        $folder = implode([ROOT_PATH,"public", DIRECTORY_SEPARATOR, "upload" ]);
-        $info = $file->validate([ 'ext' => 'jpg,png,gif'])->rule("md5") ->move($folder);
-        if (! $info) {
-            $this->success($file->getError(), "/", null, 0);
-            return;
-        }
-        $url = implode(["/upload/",$info->getSaveName() ]);
-        
-        
-//         $this->request->
-        $this->error("", "/", ["src"=> $url], 0);
-    }
+   
     
     /**
      * 客户端的消息反馈, 说明已经收到信息
-     * @param mixed $sign
+     * @param mixed $sign 如果是true对每个人查50条，如果是false 查50条
      */
-    public function postMessageFeedback($sign) {
-        $this->service->messageFeedback(cmf_get_current_user_id(), $sign);
+    public function postFeedback($sign) {
+        SingletonServiceFactory::getChatService()->messageFeedback(cmf_get_current_user_id(), $sign);
         return $sign;
     }
     
     /**
-     * 聊天文件, 群组和用户的.
-     * @param mixed $file
+     * 查询聊天记录
+     * @param string $type 聊天记录类型
+     * @param int $id 用户id 群聊id
+     * @param boolean $separately
+     * @param number $no 页码 
+     * @param number $count 页数
+     * @return array
      */
-    public function postMessageFile()
-    {
-        $file = $this->request->file("file");
-//         im_log("debug", $file->getInfo()["name"]);
-        if (! $file) {
-            $this->success("未选择任何文件.", "/", null, 0);
-            return;
+    private function getMessages($type, $id, $separately, $no, $count) {
+        $data = null;
+        //判断类型
+        if($type == 'friend'){
+            //判断id是否存在 存在则指定查询好友 不存在则查询和所有好友的聊天记录
+            if($id){
+                $data = Db::table('im_chat_user a,cmf_user b,im_friends c')
+                ->where('a.sender_id = b.id')
+                ->where('a.sender_id = c.user_id')
+                ->where('((a.receiver_id = '.$this->userId.' AND a.sender_id = '.$id.') OR (a.receiver_id = '.$id.' AND a.sender_id = '.$this->userId.'))')
+                ->order('a.send_date', 'desc')
+                ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
+                ->page($no, $count)
+                ->select();
+            }else{
+                //如果为true查询所有好友各50条 如果为false查询和所有好友最近的50条
+                if($separately){
+                    //查询出所有的好友id
+                    $contactids = Db::table('im_friends')
+                    ->where(['user_id' => $this->user['id']])
+                    ->column('contact_id');
+                    
+                    $data = null;
+                    foreach ($contactids as $value) {
+                        $res = Db::table('im_chat_user a,cmf_user b,im_friends c')
+                        ->where('a.sender_id = b.id')
+                        ->where('a.sender_id = c.user_id')
+                        ->where('((a.receiver_id = '.$this->user['id'].' AND a.sender_id = '.$value.') OR (a.receiver_id = '.$value.' AND a.sender_id = '.$this->user['id'].'))')
+                        ->order('a.send_date', 'desc')
+                        ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
+                        ->page($no, $count)
+                        ->select();
+                        
+                        //合并数组
+                        $data = array_merge($data, $res);
+                    }
+                }
+            }
+        }else if($type == 'group'){
+            if($id){
+                $data = Db::table('im_chat_group a')
+                ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
+                ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
+                ->join(['im_group' => 'd'],'d.id = a.group_id','LEFT')
+                ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
+                ->where(['a.group_id' => $id])
+                ->order('a.send_date', 'desc')
+                ->page($no, $count)
+                ->select();
+            }else{
+                if($separately){
+                    //查询出所有的群组id
+                    $contactids = Db::table('im_groups')
+                    ->where(['user_id' => $this->user['id']])
+                    ->column('contact_id');
+                    
+                    $data = null;
+                    foreach ($contactids as $value) {
+                        $res = $data = Db::table('im_chat_group a')
+                        ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
+                        ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
+                        ->join(['im_group' => 'd'],'a.group_id = d.id','LEFT')
+                        ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
+                        ->where(['a.group_id' => $value])
+                        ->order('a.send_date', 'desc')
+                        ->page($no, $count)
+                        ->select();
+                        
+                        //合并数组
+                        $data = array_merge($data, $res);
+                    }
+                }
+            }
         }
-        $folder = implode([ROOT_PATH,"public", DIRECTORY_SEPARATOR, "upload" ]);
-        $info = $file->rule("md5") ->move($folder);
-        if (! $info) {
-            $this->success($file->getError(), "/", null, 0);
-            return;
-        }
-        $url = implode(["/upload/",$info->getSaveName() ]);
-        $fileName = isset($file->getInfo()["name"])?
-            $file->getInfo()["name"]:$info->getSaveName();
-        
-        $this->error("", "/", ["src"=>$url, "name"=>$fileName], 0);
+        return $data;
     }
     
+
     
     /*
     public function sendMessage($id, $type, $content){

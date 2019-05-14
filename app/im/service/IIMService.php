@@ -68,7 +68,7 @@ interface IIMService {
      * @param mixed $key
      * @return array
      */
-    public function findGroups($key): array;
+    public function findGroups($key, $no, $count): array;
     
    
     
@@ -93,13 +93,4 @@ interface IIMService {
      * @exception \app\im\exception\OperationFailureException 当操作失败时抛出.
      */
     public function linkGroupMsg($sender, $groupId, $content, $ip=null): void;
-    
-
-    /**
-     * 更新用户信息
-     * @param mixed $userId 用户 id
-     * @param mixed $data 要更新的信息
-     * @return bool
-     */
-    public function updateUser($userId, $data): bool;
 }

@@ -88,7 +88,7 @@
             var form = new FormData();
             form.append("file", this.files[0]);
             form.append("_ajax", true);
-            fetch("/im/contact/avatar", {
+            fetch("/im/comm/avatar", {
                 method: "POST",
                 body: form,
                 headers: { "HTTP_X_REQUESTED_WITH": "xmlhttprequest" }
@@ -96,8 +96,8 @@
                 return response.json();
             }).then(function (res) {
                 if (!res.code) {
-                    $("#display-avatar").attr({ src: res.data });
-                    $("input[name='avatar']").attr({ value: res.data });
+                    $("#display-avatar").attr({ src: res.data.src });
+                    $("input[name='avatar']").attr({ value: res.data.src });
                 } else {
                     layer.msg(res.msg);
                 }

@@ -25,6 +25,7 @@ return [
         "cache_chat_last_send_time_key"=>"im_chat_last_send_time_hash", // 保存消息重发的消息详情 
         "cache_chat_resend_list_key"=>"im_chat_resend_list", // 排列需要重发的消息
         "cache_chat_read_message_key"=>"im_chat_read_message_hash", // 暂存已读消息的 id.
+        "cache_chat_online_user_key"=>"im_chat_online_user_set", // 在线用户的信息
     ]
 //     ,
 //     "cache"=>[

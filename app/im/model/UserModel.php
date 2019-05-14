@@ -4,13 +4,25 @@ namespace app\im\model;
 use think\Model;
 use function Qiniu\json_decode;
 
-class UserModel extends Model
-{
-    public function getUserById(...$userId): \think\Collection {
-        return $this->getQuery()
+class UserModel extends Model implements IUserModel {
+    public function getUserById(...$userId) {
+        $users = $this->getQuery()
             ->field("id, avatar, user_nickname AS username, signature AS sign")
             ->whereIn("id", $userId)
-            ->select();
+            ->select()
+            ->toArray();
+        
+        $result = [];
+        for ($i=0; $i<count($userId); $i++) {
+            $id = $userId[$i];
+            foreach ($users as $u) {
+                if ($u["id"] == $id) {
+                    $result[$i] = $u;
+                    break;
+                }
+            }
+        }
+        return $result;
     }
     // 一对多关联
     public function msgbox()

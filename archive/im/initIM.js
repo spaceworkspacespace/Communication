@@ -7,35 +7,15 @@ var initIM = (function ($, _) {
 			return;
 		}
 
-		// 配置避免为空
-		config = config || {};
-		var urls = config.urls = config.urls || {};
-
-		function sendInit() {
-			$.ajax({
-				url: urls.init,
-				success: function (data, status, xhr) {
-					config.init = data.data;
-					_init(config)
-				},
-				error: function (xhr, status, error) { sendInit(); }
-			})
-		}
-		sendInit();
-	}
-
-	function _init(config) {
-		layui.use("mobile", function () {
-			var mobile = layui.mobile,
-				layim = mobile.layim;
-
+		layui.use("layim", function (layim) {
 			// layim = layui.mobile.layim;
 			if (!layim) {
 				console.error("IM 初始化失败, 请确认正确载入依赖 !");
 				return;
 			}
-
-			var urls = config.urls;
+			// 配置避免为空
+			config = config || {};
+			var urls = config.urls || {};
 
 			// 连接 socket 服务器
 			if (!urls.socket) {
@@ -55,18 +35,102 @@ var initIM = (function ($, _) {
 				// brief: true
 				title: config.title || "IM",
 				notice: true,
-				init: config.init,
+				init: { url: urls.init },
 				members: { url: urls.members },
 				uploadImage: { url: urls.uploadImage },
 				uploadFile: { url: urls.uploadFile },
-				// moreList: [{
-				// 	alias: "find",
-				// 	title: "发现",
-				// 	iconUnicode: '&#xe628;', //图标字体的unicode，可不填
-				// 	iconClass: '' //图标字体的class类名
+				// tool: [{
+				// 	alias: 'code',
+				// 	title: '代码',
+				// 	icon: '&#xe64e;'
 				// }],
+				msgbox: urls.msgbox,
+				find: urls.find,
+				chatLog: urls.chatLog,
 				copyright: true,
 			});
+
+			// 监听发送消息
+			layim.on('sendMessage', function (data, passCid) {
+				// console.log(data)
+				$.ajax({
+					url: "/im/chat/message",
+					method: "POST",
+					data: { id: data.to.id, type: data.to.type, content: data.mine.content },
+					success: function (data) {
+						if (data.code) {
+							layer.msg(data.msg);
+							passCid(null);
+							layim.getMessage({
+								system: true,
+								id: data.to.id,
+								type: data.to.type,
+								content: '消息发送失败.'
+							});
+							return;
+						}
+						if (data.data) passCid(data.data.cid);
+					},
+					error: function (xhr, status, error) {
+						layer.msg("消息发送失败, 请检查网络设置~");
+						passCid(null);
+						layim.getMessage({
+							system: true,
+							id: data.to.id,
+							type: data.to.type,
+							content: '消息发送失败.'
+						});
+					}
+				});
+				// $.post('/im/chat/message',
+				// 	{ id: data.to.id, type: data.to.type, content: data.mine.content },
+				// 	function (data) {
+				// 		if (data.code) layer.msg(data.msg);
+				// 		if (data.data) passCid(data.data.cid);
+				// 	}, 'json');
+				// 如果对方离线
+				// if (data.type == 'friend') {
+				// 	if (data.code == 0) {
+				// 		layim.setChatStatus('<span style="color:#FF5722;">离线</span>');
+				// 		layim.setFriendStatus(data.id, 'offline');
+				// 	} else {
+				// 		layim.setChatStatus('<span style="color:green;">在线</span>');
+				// 		layim.setFriendStatus(data.id, 'online');
+				// 	}
+				// }
+
+			});
+
+			// 监听鼠标点击发言内容
+			layim.on("chatMsgClick", function (event) {
+				// var othercontextmenuul = $(".contextmenuul");
+				// othercontextmenuul.hide();
+				console.log(event);
+				// // 聊天面板的宽高
+				// var chatmain = $(".layim-chat-main");
+				// var chatmainWidth = chatmain.width();
+				// var chatmainHeight = chatmain.height();
+				// //获取鼠标点击位置坐标
+				// var mouseX = event.pageX;
+				// var mouseY = event.pageY;
+				// 拿到显示的menu
+				var contextmenuul = $(this).find(".contextmenuul");
+				// var contextmenuul =$(".contextmenuul");
+				console.log("contextmenuul", contextmenuul);
+				contextmenuul.show();
+				var menu = $("#x-chat-del-menu");
+				// 首次加入
+				if (!menu.length) {
+
+				}
+			});
+			$(document).on('click', function (e) {
+				var target = e.target;
+				var contextmenuul = $(".contextmenuul");
+				if (contextmenuul !== target) {
+					contextmenuul.hide();
+				}
+			})
 
 			// 删除消息
 			layim.on("chatMsgDelete", function (cid, type, del) {
@@ -75,8 +139,8 @@ var initIM = (function ($, _) {
 					method: "DELETE",
 					data: { cid: cid, type: type },
 					success: function (data) {
-						if (!data.code) del();
 						layer.msg(data.msg);
+						if (!data.code) del();
 					},
 					error: function (xhr, satatus) {
 						layer.msg("请求错误, 请稍后重试~");
@@ -84,31 +148,26 @@ var initIM = (function ($, _) {
 				});
 			});
 
-			layim.on("newFriend", function () {
-				// $.ajax({
-				// 	url: "/im/index/msgbox",
-				// 	method: "GET",
-				// 	success: function(data, status, xhr) {
-				// 		console.log(data)
-				// 		layim.panel({
-				// 			title: "新的朋友",
-				// 			tpl: data,
-				// 			data: {}
-				// 		});
-				// 	}
-				// });
-				location.href = "/im/index/find";
+			layim.on("ready", function (res) {
+				// 删除本地数据
+				try {
+					var cache = layui.layim.cache();
+					if (cache) {
+						var local = layui.data('layim')[cache.mine.id];
+						delete local.chatlog;
+						layui.data('layim', {
+							key: cache.mine.id,
+							value: local
+						});
+					}
+				} catch (e) {
+					console.error(e);
+				}
 			});
 
-			// 监听发送消息
-			layim.on('sendMessage', function (data, passCid) {
-				// console.log(data)
-				$.post('/im/chat/message',
-					{ id: data.to.id, type: data.to.type, content: data.mine.content },
-					function (data) {
-						if (data.code) layer.msg(data.msg);
-						if (data.data) passCid(data.data.cid);
-					}, 'json');
+			//监听查看群员
+			layim.on('members', function (data) {
+
 			});
 
 			layim.on("sign", function (data) {
@@ -125,14 +184,6 @@ var initIM = (function ($, _) {
 				});
 			});
 
-			layim.on("moreList", function (ex) {
-				switch (ex.alias) {
-					case "find":
-						location.href = "/im/index/find";
-						break;
-				}
-			});
-
 			// var $id = {:cmf_get_current_user_id()};
 			client.onopen = function (event) {
 				layer.msg("连接可用");
@@ -142,10 +193,9 @@ var initIM = (function ($, _) {
 				layer.msg("连接已断开, 重连中...");
 			}
 
-			// var $id = {:cmf_get_current_user_id()};
 			// 聊天消息
 			client.onxmessage = function (data) {
-				console.log(data);
+				// console.log(data);
 				var msgLen = data.length;
 				data.sort(function (l, r) {
 					return l.timestamp > r.timestamp ? 1 : -1;
@@ -158,7 +208,7 @@ var initIM = (function ($, _) {
 			}
 
 			// 有新的请求信息
-			client.onxask = function (data) { layim.showNew('Friend', true); }
+			client.onxask = function (data) { layim.msgbox(data.msgCount); }
 
 			// 有新的添加命令
 			client.onxadd = function (data) {
@@ -177,6 +227,8 @@ var initIM = (function ($, _) {
 				});
 			}
 
+
+
 			client.onxconnected = function (data) {
 				// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定
 				var clientId = data.id;
@@ -187,35 +239,9 @@ var initIM = (function ($, _) {
 					// console.log(ks);
 					client.setKeys(ks);
 
-					// 删除本地数据
-					try {
-						var cache = layui.mobile.layim.cache();
-						if (cache) {
-							var local = layui.data('layim-mobile')[cache.mine.id];
-							delete local.chatlog;
-
-							layui.data('layim-mobile', {
-								key: cache.mine.id,
-								value: local
-							});
-						}
-					} catch (e) {
-						console.error(e);
-					}
-
 					// 发送启动完成的请求
 					sendFinish();
-
-
 				}, 'json');
-
-				function sendFinish() {
-					$.ajax({
-						url: "/im/index/finish",
-						success: function (data, status, xhr) { layer.msg("登录成功"); },
-						error: function (xhr, status) { setTimeout(sendFinish, 1500); }
-					});
-				}
 			}
 
 			window.onmessage = function (event) {
@@ -255,16 +281,30 @@ var initIM = (function ($, _) {
 							layim.add(options);
 						}
 						break;
-					default:
-						console.error("未知消息! ");
-						console.error(event);
-						break;
+					// default:
+					// 	console.error("未知消息! ");
+					// 	console.error(event);
+					// 	break;
 				}
+			}
+			function sendFinish() {
+				// 确保在 bind 之后
+				if (!client.clientId) {
+					setTimeout(sendFinish, 500);
+					return;
+				}
+				$.ajax({
+					url: "/im/index/finish",
+					success: function (data, status, xhr) { layer.msg("登录成功"); },
+					error: function (xhr, status) { setTimeout(sendFinish, 1500); }
+				});
 			}
 
 
 			window.layim = layim;
 		});
 	}
+
+
 	return initIM;
 })($, _);
