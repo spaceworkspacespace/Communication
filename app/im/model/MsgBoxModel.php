@@ -143,6 +143,7 @@ SQL;
                     break;
                 case IMessageModel::TYPE_GROUP_INVITE:
                 case IMessageModel::TYPE_GROUP_INVITE_REFUSE:
+                case IMessageModel::TYPE_GROUPMEMBER_LEAVE:
                     array_push($data["associated"] , [
                         "id"=>$data["a1id"],
                         "username"=>$data["a1username"],
@@ -342,10 +343,12 @@ SQL;
 SQL;
                 break;
             case IMessageModel::TYPE_GROUP_INVITE:
-            case IMessageModel::TYPE_GROUP_ASK_REFUSE:
+            case IMessageModel::TYPE_GROUP_INVITE_REFUSE:
+            case IMessageModel::TYPE_GROUPMEMBER_LEAVE:
                 $result["type"] = implode(",", [
                     IMessageModel::TYPE_GROUP_INVITE,
-                    IMessageModel::TYPE_GROUP_ASK_REFUSE]);
+                    IMessageModel::TYPE_GROUP_INVITE_REFUSE,
+                    IMessageModel::TYPE_GROUPMEMBER_LEAVE]);
                 $result["field"] = <<<SQL
 ,
     `iu`.`id` AS `a1id`,

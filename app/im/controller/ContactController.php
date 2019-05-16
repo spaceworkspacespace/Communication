@@ -117,6 +117,69 @@ class ContactController extends Controller
     }
     
     /**
+     * 退出群聊
+     * @param int $gid 群聊id
+     */
+    public function deleteMyGroup($gid) {
+        $reMsg = "";
+        $reData = "";
+        $failure = false;
+        try {
+            SingletonServiceFactory::getContactService()->leaveGroup($this->user["id"], $gid);
+            $reMsg = "退出成功";
+        } catch(OperationFailureException $e) {
+            $reMsg = $e->getMessage();
+            $failure = true;
+        } finally {
+            if ($failure) {
+                $this->success($reMsg, "/", $reData, 0);
+            } else {
+                $this->error($reMsg, "/", $reData, 0);
+            }
+        }
+        //         //查询出该群所有管理员的id
+        //         $adminIds = $this->queryGroupAdminById($gid);
+        
+        //         Db::startTrans();
+        //         try {
+        //             //群聊人数-1
+        //             $this->GroupsCount($gid, 0);
+        
+        //             //删除在群聊表中相关的信息
+        //             Db::table('im_groups')
+        //             ->where([
+        //                 'user_id' => $this->user['id'],
+        //                 'contact_id' => $gid
+        //             ])
+        //             ->delete();
+        
+        //             //为所有管理员生成成员变动通知
+        //             $imId = Db::table('im_msg_box')
+        //             ->insertGetId([
+        //                 'sender_id' => $this->user['id'],
+        //                 'send_date' => time(),
+        //                 'send_ip' => $this->user['last_login_ip'],
+        //                 'content' => '用户'.$this->user['nike_username'].'已退出群聊',
+        //             ]);
+        //             foreach ($adminIds as $value) {
+        //                 Db::table('im_msg_receive')
+        //                 ->insertAll([
+        //                     [
+        //                         'id' => $imId,
+        //                         'receiver_id' => $value['user_id'],
+        //                         'send_date' => time()
+        //                     ]
+        //                 ]);
+        //             }
+        //             Db::commit();
+        //         } catch (\Exception $e) {
+        //             Db::rollback();
+        //             $this->success("奥奥~ 遇到问题了，请稍后重试", "/", $e->getMessage(), 0);
+        //         }
+        //         $this->error('已退出群聊', '/', null, 0);
+    }
+    
+    /**
      * 添加好友
      * @param int $id 对方的id
      * @param int $fgId 添加到的好友分组id
@@ -224,53 +287,6 @@ class ContactController extends Controller
         }
         im_log("info", "数据验证失败 !", $validate->getError());
         $this->success("", "/", $validate->getError(), 0);
-    }
-    
-    /**
-     * 退出群聊
-     * @param int $gid 群聊id
-     */
-    public function deleteMyGroup($gid) {
-        //查询出该群所有管理员的id
-        $adminIds = $this->queryGroupAdminById($gid);
-        
-        Db::startTrans();
-        try {
-            //群聊人数-1
-            $this->GroupsCount($gid, 0);
-            
-            //删除在群聊表中相关的信息
-            Db::table('im_groups')
-            ->where([
-                'user_id' => $this->user['id'],
-                'contact_id' => $gid
-            ])
-            ->delete();
-            
-            //为所有管理员生成成员变动通知
-            $imId = Db::table('im_msg_box')
-            ->insertGetId([
-                'sender_id' => $this->user['id'],
-                'send_date' => time(),
-                'send_ip' => $this->user['last_login_ip'],
-                'content' => '用户'.$this->user['nike_username'].'已退出群聊',
-            ]);
-            foreach ($adminIds as $value) {
-                Db::table('im_msg_receive')
-                ->insertAll([
-                    [
-                        'id' => $imId,
-                        'receiver_id' => $value['user_id'],
-                        'send_date' => time()
-                    ]
-                ]);
-            }
-            Db::commit();
-        } catch (\Exception $e) {
-            Db::rollback();
-            $this->success("奥奥~ 遇到问题了，请稍后重试", "/", $e->getMessage(), 0);
-        }
-        $this->error('已退出群聊', '/', null, 0);
     }
     
     /**

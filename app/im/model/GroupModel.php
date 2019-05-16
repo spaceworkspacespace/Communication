@@ -217,6 +217,15 @@ SQL;
         return $result;
     }
     
+    public function getGroupMemberCount($groupId) {
+        return Db::table("im_groups")
+            ->where("contact_id=:gid")
+            ->bind([
+                "gid"=>[$groupId, \PDO::PARAM_INT],
+            ])
+            ->count("contact_id");
+    }
+    
     public function getOriginGroupByUser($userId, $groupId, $fields="*")  {
         $resultSet = Db::table("im_groups")
             ->field($fields)

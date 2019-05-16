@@ -25,6 +25,13 @@ interface IGroupModel {
     public function getGroupById(...$groupId);
     
     /**
+     * 查询群聊人数
+     * @param mixed $groupId
+     * @return int 人数
+     */
+    public function getGroupMemberCount($groupId);
+    
+    /**
      * 通过用户信息获取 im_groups 表数据, 字段同数据库字段名
      * @param mixed $userId
      * @param mixed $groupId

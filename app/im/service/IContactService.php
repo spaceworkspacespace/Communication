@@ -105,6 +105,14 @@ interface IContactService {
     public function joinGroupAsk($sender, $groupId, $content, $ip = null) ;
     
     /**
+     * 推出群聊
+     * @param mixed $userId 用户 id
+     * @param mixed $groupId 群聊 id
+     * @param string $remark 附言
+     */
+    public function leaveGroup($userId, $groupId, $remark = "") ;
+    
+    /**
      * 更新好友信息
      * @param mixed $userId 用户
      * @param array $friend 好友的属性 { id, group, alias }

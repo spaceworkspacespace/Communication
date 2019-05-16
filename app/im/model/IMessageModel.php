@@ -10,6 +10,7 @@ interface IMessageModel {
     const TYPE_GROUP_ASK_REFUSE = 13;
     const TYPE_GROUP_INVITE = 3;
     const TYPE_GROUP_INVITE_REFUSE = 15;
+    const TYPE_GROUPMEMBER_LEAVE = 23;
     const TYPE_GROUPMEMBER_REMOVE = 21;
     const TYPE_GROUPMEMBER_BE_REMOVED = 22;
     

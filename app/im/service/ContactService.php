@@ -614,6 +614,53 @@ class ContactService implements IContactService {
         }
     }
     
+    public function leaveGroup($userId, $groupId, $remark = "") {
+        try {
+            foreach([$userId, $groupId] as $m) {
+                if (!is_numeric($m)) {
+                    throw new OperationFailureException("参数错误");
+                }
+            }
+            // 判断用户是否有指定群聊
+            if (!ModelFactory::getGroupModel()->inGroup($userId, $groupId)) {
+                throw new OperationFailureException("群聊不存在");
+            }
+            Db::startTrans();
+            // 删除群聊关系
+            ModelFactory::getGroupModel()->deleteGroupMemberById($groupId, $userId);
+            // 更新群聊用户
+            ModelFactory::getGroupModel()->updateGroup($groupId, [
+                "admin_count"=>ModelFactory::getGroupModel()
+                    ->getGroupMemberCount($groupId)
+            ]);
+            // 生成管理员通知
+            $data = [
+                "sender_id"=>0,
+                "send_date"=>time(),
+                "content"=>"",
+                "type"=>IMessageModel::TYPE_GROUPMEMBER_LEAVE,
+                "corr_id"=>$userId,
+                "corr_id2"=>$groupId
+            ];
+            $admins = ModelFactory::getGroupModel()->getGroupAdminIds($groupId);
+            ModelFactory::getMessageModel()->createMessage($data, $admins);
+            Db::commit();
+            foreach($admins as $id) {
+                SingletonServiceFactory::getPushService()->pushMsgBoxNotification($id);
+            }
+            // 移除群聊命令
+            SingletonServiceFactory::getGatewayService()
+                ->sendToUser($userId, [["id"=>$groupId]], IGatewayService::TYPE_GROUP_REMOVE);
+        } catch (OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch(\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException();
+        }
+    }
+    
     /**
      * 更新好友信息
      * @param mixed $userId 用户
