@@ -3,6 +3,7 @@
 namespace app\im\model;
 use think\Db;
 use think\Model;
+use app\im\exception\OperationFailureException;
 
 class MsgBoxModel extends Model implements IMessageModel {
     protected $connection = [
@@ -143,7 +144,6 @@ SQL;
                     break;
                 case IMessageModel::TYPE_GROUP_INVITE:
                 case IMessageModel::TYPE_GROUP_INVITE_REFUSE:
-                case IMessageModel::TYPE_GROUPMEMBER_LEAVE:
                     array_push($data["associated"] , [
                         "id"=>$data["a1id"],
                         "username"=>$data["a1username"],
@@ -343,12 +343,10 @@ SQL;
 SQL;
                 break;
             case IMessageModel::TYPE_GROUP_INVITE:
-            case IMessageModel::TYPE_GROUP_INVITE_REFUSE:
-            case IMessageModel::TYPE_GROUPMEMBER_LEAVE:
+            case IMessageModel::TYPE_GROUP_ASK_REFUSE:
                 $result["type"] = implode(",", [
                     IMessageModel::TYPE_GROUP_INVITE,
-                    IMessageModel::TYPE_GROUP_INVITE_REFUSE,
-                    IMessageModel::TYPE_GROUPMEMBER_LEAVE]);
+                    IMessageModel::TYPE_GROUP_ASK_REFUSE]);
                 $result["field"] = <<<SQL
 ,
     `iu`.`id` AS `a1id`,
@@ -467,4 +465,19 @@ SQL;
     {
         return $this->belongsTo('UserModel','sender_id');
     }
+    
+    public function deleteIndex($id)
+    {
+        Db::table('im_msg_receive')
+        ->where(['id' => $id])
+        ->update(['visible' => 0]);
+    }
+    public function postFeedBack($id)
+    {
+        Db::table('im_msg_receive')
+        ->where(['id' => $id])
+        ->update(['read' => 1]);
+    }
+
+
 }

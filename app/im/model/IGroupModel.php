@@ -4,6 +4,13 @@ namespace app\im\model;
 interface IGroupModel {
     
     /**
+     * 查询自己的权限
+     * @param int $id 我的id
+     * @param int $gid 群聊id
+     */
+    public function queryMyPermi($id, $gid) ;
+    
+    /**
      * 删除指定群聊中的成员
      * @param mixed $gid
      * @param mixed ...$uid
@@ -23,13 +30,6 @@ interface IGroupModel {
      * @return array 
      */
     public function getGroupById(...$groupId);
-    
-    /**
-     * 查询群聊人数
-     * @param mixed $groupId
-     * @return int 人数
-     */
-    public function getGroupMemberCount($groupId);
     
     /**
      * 通过用户信息获取 im_groups 表数据, 字段同数据库字段名
@@ -62,4 +62,60 @@ interface IGroupModel {
      * @param mixed $data
      */
     public function updateGroup($gid, $data);
+    
+    /**
+     * 群聊人数+1或者-1
+     * @param int $gid 群聊id
+     * @param integer $str 为空表示逻辑失败,0表示群聊人数-1|1表示群聊人数+1
+     */
+    public function GroupsCount($gid, $str) ;
+    
+    /**
+     * 退出群聊
+     * @param int $gid 群聊id
+     * @param array $user 我的信息
+     */
+    public function deleteMyGroup($gid, $user) ;
+    
+    /**
+     * 查询该群所有管理员id
+     * @param int $gid 群聊id
+     */
+    public function queryGroupAdminById($gid) ;
+    
+    /**
+     * 邀请加入群聊
+     * @param int $gid 群聊id
+     * @param array $user 我的信息
+     * @param int $uid 用户id
+     */
+    public function postGroupMember($gid, $uid, $user) ;
+    
+    /**
+     * 修改群聊
+     * @param int $gid 群聊 id
+     * @param string $name 群聊名称
+     * @param string $desc 群聊简介
+     * @param string $avatar 群聊图像地址
+     * @param int $admin 管理者 id
+     */
+    public function putGroup($gid, $name, $desc, $avatar, $admin) ;
+    
+    /**
+     * 解散群聊
+     * @param int $gid 群聊id
+     */
+    public function deleteGroup($gid) ;
+    
+    /**
+     * 查询群聊是否解散
+     * @param int $gid 群聊id
+     */
+    public function queryGroupDissolve($gid) ;
+    
+    /**
+     * 查询群聊名称是否已存在
+     * @param string $groupName 群聊名称
+     */
+    public function getGroupByName($groupName) ;
 }

@@ -4,6 +4,13 @@ namespace app\im\model;
 interface IFriendModel {
     
     /**
+     * 分组人数变动
+     * @param int $gid 分组id
+     * @param int $str 0为-1||1为+1
+     */
+    public function FriendGroupCount($gid, $str);
+    
+    /**
      * 创建一个好友分组
      * @param mixed $userId
      * @param mixed $data
@@ -25,6 +32,13 @@ interface IFriendModel {
      * @return int 删除数量
      */
     public function deleteFriendById($uid1, $uid2);
+    
+    /**
+     * 修改分组信息
+     * @param int $id 分组id
+     * @param string $name 新的名字
+     */
+    public function putFriendGroup($id, $name);
     
     /**
      * 通过分组的 id 删除分组
@@ -79,7 +93,7 @@ interface IFriendModel {
      * @param mixed $fgId1
      * @return boolean 是否设置成功
      */
-    public function setFriend($uid, $fgId, $uid1, $fgId1);
+    public function setFriend($uid, $fgId, $uUserName, $uid1, $fgId1, $uUserName1);
     
     /**
      * 更新好友信息
@@ -105,4 +119,18 @@ interface IFriendModel {
      * @return array 更新成功的信息, 不是完整所有的信息.
      */
     public function updateFriendGroup($fgId, $data) ;
+    
+    /**
+     * 将好友更换分组
+     * @param int $contact 好友id
+     * @param int $group 分组id
+     * @param array $user 登陆人信息
+     */
+    public function putFriend($contact, $group, $user) ;
+    
+    /**
+     * 根据好友id查询所在分组
+     * @param int $id 好友id
+     */
+    public function queryFriendGroupByFriendId($id, $user) ;
 }

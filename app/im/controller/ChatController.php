@@ -2,13 +2,8 @@
 namespace app\im\controller;
 
 use app\im\exception\OperationFailureException;
-use traits\controller\Jump;
 use think\Controller;
-use app\im\service\IMServiceImpl;
-use app\im\service\GatewayServiceImpl;
-use GatewayClient\Gateway;
 use app\im\service\IChatService;
-use think\Db;
 use app\im\service\SingletonServiceFactory;
 
 class ChatController extends Controller{
@@ -30,7 +25,7 @@ class ChatController extends Controller{
         
         if (!$isLogin) {
             if ($this->request->isAjax()) {
-                $this->success("您尚未登录", cmf_url("user/Login/index"));
+                $this->error("您尚未登录", cmf_url("user/Login/index"));
             } else {
                 $this->redirect(cmf_url("user/Login/index"));
             }
@@ -98,7 +93,6 @@ class ChatController extends Controller{
         $message = "";
         $reData = [];
         $failure = false;
-        // $data = $this->getMessages($type, $id, $separately, $no, $count);
         
         try {
             if ($type != null ){
@@ -191,91 +185,91 @@ class ChatController extends Controller{
         return $sign;
     }
     
-    /**
-     * 查询聊天记录
-     * @param string $type 聊天记录类型
-     * @param int $id 用户id 群聊id
-     * @param boolean $separately
-     * @param number $no 页码 
-     * @param number $count 页数
-     * @return array
-     */
-    private function getMessages($type, $id, $separately, $no, $count) {
-        $data = null;
-        //判断类型
-        if($type == 'friend'){
-            //判断id是否存在 存在则指定查询好友 不存在则查询和所有好友的聊天记录
-            if($id){
-                $data = Db::table('im_chat_user a,cmf_user b,im_friends c')
-                ->where('a.sender_id = b.id')
-                ->where('a.sender_id = c.user_id')
-                ->where('((a.receiver_id = '.$this->userId.' AND a.sender_id = '.$id.') OR (a.receiver_id = '.$id.' AND a.sender_id = '.$this->userId.'))')
-                ->order('a.send_date', 'desc')
-                ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
-                ->page($no, $count)
-                ->select();
-            }else{
-                //如果为true查询所有好友各50条 如果为false查询和所有好友最近的50条
-                if($separately){
-                    //查询出所有的好友id
-                    $contactids = Db::table('im_friends')
-                    ->where(['user_id' => $this->user['id']])
-                    ->column('contact_id');
+//     /**
+//      * 查询聊天记录
+//      * @param string $type 聊天记录类型
+//      * @param int $id 用户id 群聊id
+//      * @param boolean $separately
+//      * @param number $no 页码 
+//      * @param number $count 页数
+//      * @return array
+//      */
+//     private function getMessages($type, $id, $separately, $no, $count) {
+//         $data = null;
+//         //判断类型
+//         if($type == 'friend'){
+//             //判断id是否存在 存在则指定查询好友 不存在则查询和所有好友的聊天记录
+//             if($id){
+//                 $data = Db::table('im_chat_user a,cmf_user b,im_friends c')
+//                 ->where('a.sender_id = b.id')
+//                 ->where('a.sender_id = c.user_id')
+//                 ->where('((a.receiver_id = '.$this->userId.' AND a.sender_id = '.$id.') OR (a.receiver_id = '.$id.' AND a.sender_id = '.$this->userId.'))')
+//                 ->order('a.send_date', 'desc')
+//                 ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
+//                 ->page($no, $count)
+//                 ->select();
+//             }else{
+//                 //如果为true查询所有好友各50条 如果为false查询和所有好友最近的50条
+//                 if($separately){
+//                     //查询出所有的好友id
+//                     $contactids = Db::table('im_friends')
+//                     ->where(['user_id' => $this->user['id']])
+//                     ->column('contact_id');
                     
-                    $data = null;
-                    foreach ($contactids as $value) {
-                        $res = Db::table('im_chat_user a,cmf_user b,im_friends c')
-                        ->where('a.sender_id = b.id')
-                        ->where('a.sender_id = c.user_id')
-                        ->where('((a.receiver_id = '.$this->user['id'].' AND a.sender_id = '.$value.') OR (a.receiver_id = '.$value.' AND a.sender_id = '.$this->user['id'].'))')
-                        ->order('a.send_date', 'desc')
-                        ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
-                        ->page($no, $count)
-                        ->select();
+//                     $data = null;
+//                     foreach ($contactids as $value) {
+//                         $res = Db::table('im_chat_user a,cmf_user b,im_friends c')
+//                         ->where('a.sender_id = b.id')
+//                         ->where('a.sender_id = c.user_id')
+//                         ->where('((a.receiver_id = '.$this->user['id'].' AND a.sender_id = '.$value.') OR (a.receiver_id = '.$value.' AND a.sender_id = '.$this->user['id'].'))')
+//                         ->order('a.send_date', 'desc')
+//                         ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
+//                         ->page($no, $count)
+//                         ->select();
                         
-                        //合并数组
-                        $data = array_merge($data, $res);
-                    }
-                }
-            }
-        }else if($type == 'group'){
-            if($id){
-                $data = Db::table('im_chat_group a')
-                ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
-                ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
-                ->join(['im_group' => 'd'],'d.id = a.group_id','LEFT')
-                ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
-                ->where(['a.group_id' => $id])
-                ->order('a.send_date', 'desc')
-                ->page($no, $count)
-                ->select();
-            }else{
-                if($separately){
-                    //查询出所有的群组id
-                    $contactids = Db::table('im_groups')
-                    ->where(['user_id' => $this->user['id']])
-                    ->column('contact_id');
+//                         //合并数组
+//                         $data = array_merge($data, $res);
+//                     }
+//                 }
+//             }
+//         }else if($type == 'group'){
+//             if($id){
+//                 $data = Db::table('im_chat_group a')
+//                 ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
+//                 ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
+//                 ->join(['im_group' => 'd'],'d.id = a.group_id','LEFT')
+//                 ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
+//                 ->where(['a.group_id' => $id])
+//                 ->order('a.send_date', 'desc')
+//                 ->page($no, $count)
+//                 ->select();
+//             }else{
+//                 if($separately){
+//                     //查询出所有的群组id
+//                     $contactids = Db::table('im_groups')
+//                     ->where(['user_id' => $this->user['id']])
+//                     ->column('contact_id');
                     
-                    $data = null;
-                    foreach ($contactids as $value) {
-                        $res = $data = Db::table('im_chat_group a')
-                        ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
-                        ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
-                        ->join(['im_group' => 'd'],'a.group_id = d.id','LEFT')
-                        ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
-                        ->where(['a.group_id' => $value])
-                        ->order('a.send_date', 'desc')
-                        ->page($no, $count)
-                        ->select();
+//                     $data = null;
+//                     foreach ($contactids as $value) {
+//                         $res = $data = Db::table('im_chat_group a')
+//                         ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
+//                         ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
+//                         ->join(['im_group' => 'd'],'a.group_id = d.id','LEFT')
+//                         ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
+//                         ->where(['a.group_id' => $value])
+//                         ->order('a.send_date', 'desc')
+//                         ->page($no, $count)
+//                         ->select();
                         
-                        //合并数组
-                        $data = array_merge($data, $res);
-                    }
-                }
-            }
-        }
-        return $data;
-    }
+//                         //合并数组
+//                         $data = array_merge($data, $res);
+//                     }
+//                 }
+//             }
+//         }
+//         return $data;
+//     }
     
 
     

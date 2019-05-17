@@ -30,7 +30,7 @@ class UserController extends Controller {
         
         if (!$isLogin) {
             if ($this->request->isAjax()) {
-                $this->success("您尚未登录", cmf_url("user/Login/index"));
+                $this->error("您尚未登录", cmf_url("user/Login/index"));
             } else {
                 $this->redirect(cmf_url("user/Login/index"));
             }

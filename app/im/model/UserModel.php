@@ -3,6 +3,7 @@ namespace app\im\model;
 
 use think\Model;
 use function Qiniu\json_decode;
+use think\Db;
 
 class UserModel extends Model implements IUserModel {
     public function getUserById(...$userId) {
@@ -43,6 +44,42 @@ class UserModel extends Model implements IUserModel {
     public static function contacts($userId) {
             return [];
     }
+    
+    public function getMyFriendInfo($id, $no, $count)
+    {
+        $userIds = Db::table('im_friends')
+        ->where(['user_id' => $id])
+        ->field('contact_id')
+        ->select();
+        
+        return Db::table('cmf_user')
+        ->whereIn('id', $userIds, 'or')
+        ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
+        ->page($no, $count)
+        ->select()
+        ->toArray();
+    }
+    
+    public function getFriendByIdOrName($keyword, $no, $count)
+    {
+        return Db::table('cmf_user')
+        ->where('id', '=', $keyword)
+        ->whereOr('user_nickname','LIKE','%'.$keyword.'%')
+        ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
+        ->page($no, $count)
+        ->select()
+        ->toArray();
+    }
+    
+    public function getFriendById($id)
+    {
+        return Db::table(cmf_user)
+        ->where(['id' => $id])
+        ->find('user_nickname AS username,id,avatar,signature AS sign,sex');
+    }
+
+
+
 
     /*
     public static function contacts($userId)

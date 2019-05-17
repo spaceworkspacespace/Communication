@@ -10,7 +10,6 @@ interface IMessageModel {
     const TYPE_GROUP_ASK_REFUSE = 13;
     const TYPE_GROUP_INVITE = 3;
     const TYPE_GROUP_INVITE_REFUSE = 15;
-    const TYPE_GROUPMEMBER_LEAVE = 23;
     const TYPE_GROUPMEMBER_REMOVE = 21;
     const TYPE_GROUPMEMBER_BE_REMOVED = 22;
     
@@ -99,4 +98,16 @@ interface IMessageModel {
      * @return boolean 是否成功
      */
     public function updateMessageReadByUser($userId);
+    
+    /**
+     * 消息删除
+     * @param int $id 消息id
+     */
+    public function deleteIndex($id) ;
+    
+    /**
+     * 消息已读处理
+     * @param int $id 消息id
+     */
+    public function postFeedBack($id) ;
 }

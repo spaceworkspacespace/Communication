@@ -2,9 +2,29 @@
 namespace app\im\model;
 
 use think\Db;
+use app\im\service\SingletonServiceFactory;
 
 
 class GroupModel extends IMModel implements IGroupModel {
+    
+    public function queryMyPermi($id, $gid)
+    {
+        $isAdmin = Db::table('im_group a,im_groups b')
+        ->where('a.id = b.contact_id')
+        ->where([
+            'b.user_id' => $id,
+            'a.id' => $gid
+        ])
+        ->find();
+        
+        if($isAdmin['creator_id'] == $id){
+            return 2;
+        }else if($isAdmin['is_admin'] == 1){
+            return 1;
+        }else{
+            return 0;
+        }
+    }
     
     public function deleteGroupMemberById($gid, ...$uid) {
         $uidStr = implode(",", $uid);
@@ -217,15 +237,6 @@ SQL;
         return $result;
     }
     
-    public function getGroupMemberCount($groupId) {
-        return Db::table("im_groups")
-            ->where("contact_id=:gid")
-            ->bind([
-                "gid"=>[$groupId, \PDO::PARAM_INT],
-            ])
-            ->count("contact_id");
-    }
-    
     public function getOriginGroupByUser($userId, $groupId, $fields="*")  {
         $resultSet = Db::table("im_groups")
             ->field($fields)
@@ -285,13 +296,6 @@ SQL;
             ->update($data);
     }
     
-    /**
-     * 更新群聊成员信息
-     * @param mixed $gid
-     * @param mixed $uid
-     * @param mixed $data
-     * @return number|string
-     */
     public function updateGroupMember($gid, $uid, $data) {
         return model("groups")->getQuery()
             ->where("contact_id=:gid AND user_id=:uid")
@@ -301,4 +305,164 @@ SQL;
             ])
             ->update($data);
     }
+    
+    public function deleteMyGroup($gid, $user)
+    {
+        
+        //查询出该群所有管理员的id
+        $adminIds = $this->queryGroupAdminById($gid);
+        
+        //删除在群聊表中相关的信息
+        Db::table('im_groups')
+        ->where([
+            'user_id' => $user['id'],
+            'contact_id' => $gid
+        ])
+        ->delete();
+        
+        //为所有管理员生成成员变动通知
+        $imId = Db::table('im_msg_box')
+        ->insertGetId([
+            'sender_id' => $user['id'],
+            'send_date' => time(),
+            'send_ip' => $user['last_login_ip'],
+            'content' => '用户'.$user['user_nickname'].'已退出群聊',
+        ]);
+        foreach ($adminIds as $value) {
+            Db::table('im_msg_receive')
+            ->insertAll([
+                [
+                    'id' => $imId,
+                    'receiver_id' => $value['user_id'],
+                    'send_date' => time()
+                ]
+            ]);
+        }
+    }
+
+    public function GroupsCount($gid, $str)
+    {
+        if ($str == 0) {
+            Db::table('im_group')
+            ->where('id', $gid)
+            ->dec('member_count')
+            ->update();
+        } else if($str == 0) {
+            Db::table('im_group')
+            ->where('id', $gid)
+            ->inc('member_count')
+            ->update();
+        }
+    }
+    
+    public function queryGroupAdminById($gid)
+    {
+        return Db::table('im_groups')
+        ->where([
+            'contact_id' => $gid,
+            'is_admin' => 1
+        ])
+        ->field('user_id')
+        ->select();
+    }
+    
+    public function postGroupMember($gid, $uid, $user)
+    {
+        //在im_msg_box插入相关通知
+        $imId = Db::table('im_msg_box')
+        ->insertGetId([
+            'sender_id' => $user['id'],
+            'send_date' => time(),
+            'send_ip' => $user['last_login_ip'],
+            'content' => $user['user_nickname'].'邀请您加入群聊',
+            'type' => 3,
+            'corr_id' => $uid,
+            'corr_id2' => $gid
+        ]);
+        
+        //在im_msg_receive插入相关通知
+        Db::table('im_msg_receive')
+        ->insert([
+            'id' => $imId,
+            'receiver_id' => $uid,
+            'send_date' => time(),
+        ]);
+    }
+    
+    public function putGroup($gid, $name, $desc, $avatar, $admin)
+    {
+        Db::table('im_group')
+        ->where(['id' => $gid])
+        ->update([
+            'groupname' => $name,
+            'description' => $desc,
+            'avatar' => $avatar,
+            'admin_id' => $admin
+        ]);
+        
+        return Db::table('im_group')
+        ->where(['id' => $gid])
+        ->field('id,groupname,description,avatar,create_time AS createtime,admin_id AS admin,
+        admin_count AS admincount,create_time AS createtime,member_count AS membercount')
+        ->select();
+    }
+    
+    public function deleteGroup($gid)
+    {
+        //修改群聊解散时间为3天后
+        Db::table('im_group')
+        ->where('id', $gid)
+        ->update(['delete_time' => time()+3*60*60*24]);
+        
+        $groupname = Db::table('im_group')
+        ->where('id', '=', $gid)
+        ->value('groupname');
+        
+        //为群聊中所有成员生成群聊解散消息
+        $imId = Db::table('im_msg_box')
+        ->insertGetId([
+            'sender_id' => 0,
+            'send_date' => time(),
+            'type' => 0,
+            'content' => $groupname.'群聊将在3天后解散'
+        ]);
+        
+        //查询群聊所有成员
+        $groupUsersId = Db::table('im_groups')
+        ->where([
+            'contact_id' => $gid
+        ])
+        ->field('user_id')
+        ->select();
+        
+        foreach ($groupUsersId as $value) {
+            Db::table('im_msg_receive')
+            ->insert([
+                'id' => $imId,
+                'receiver_id' => $value['user_id'],
+                'send_date' => time()
+            ]);
+            //为所有群成员推送通知
+            SingletonServiceFactory::getPushService()->pushMsgBoxNotification($value['user_id']);
+        }
+    }
+    
+    public function queryGroupDissolve($gid)
+    {
+        return Db::table('im_group')
+        ->where('id', '=', $gid)
+        ->value('delete_time');
+    }
+    
+    public function getGroupByName($groupName)
+    {
+        return Db::table('im_group')
+        ->where('groupname', '=', $groupName)
+        ->select()
+        ->toArray();
+    }
+
+
+
+
 }

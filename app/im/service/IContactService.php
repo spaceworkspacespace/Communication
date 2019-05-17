@@ -57,6 +57,13 @@ interface IContactService {
     public function deleteFriendGroup($userId, $fgId, $reserve=null) ;
     
     /**
+     * 修改分组信息
+     * @param int $id 分组id
+     * @param string $name 新的名字
+     */
+    public function putFriendGroup($id, $name) ;
+    
+    /**
      * 将群聊中的用户退出
      * @param mixed $userId
      * @param mixed $gid
@@ -105,14 +112,6 @@ interface IContactService {
     public function joinGroupAsk($sender, $groupId, $content, $ip = null) ;
     
     /**
-     * 推出群聊
-     * @param mixed $userId 用户 id
-     * @param mixed $groupId 群聊 id
-     * @param string $remark 附言
-     */
-    public function leaveGroup($userId, $groupId, $remark = "") ;
-    
-    /**
      * 更新好友信息
      * @param mixed $userId 用户
      * @param array $friend 好友的属性 { id, group, alias }
@@ -128,5 +127,52 @@ interface IContactService {
      * @return mixed 修改后的成员信息
      */
     public function updateGroupMember($uid, $gid, $member) ;
+    
+    /**
+     * 查询联系人
+     * @param string $keyword 关键字
+     * @param int $id 联系人id
+     * @param int $no 页码
+     * @param int $count 每页显示行数
+     */
+    public function getFriend($keyword, $id, $no, $count) ;
+    
+    /**
+     * 退出群聊
+     * @param int $gid 群聊id
+     */
+    public function deleteMyGroup($gid, $user) ;
+    
+    /**
+     * 邀请加入群聊
+     * @param int $gid 群聊id
+     * @param int $uid 用户id
+     */
+    public function postGroupMember($gid, $uid, $user) ;
+    
+    /**
+     * 修改群聊
+     * @param int $gid 群聊 id
+     * @param string $name 群聊名称
+     * @param string $desc 群聊简介
+     * @param string $avatar 群聊图像地址
+     * @param int $admin 管理者 id
+     * @param array $user 我的信息
+     */
+    public function putGroup($gid, $name, $desc, $avatar, $admin, $user) ;
+    
+    /**
+     * 解散群聊
+     * @param int $gid 群聊id
+     */
+    public function deleteGroup($gid, $user) ;
+    
+    /**
+     * 将好友更换分组
+     * @param int $contact 好友id
+     * @param int $group 分组id
+     * @param array $user 登陆人信息
+     */
+    public function putFriend($contact, $group, $user) ;
     
 }

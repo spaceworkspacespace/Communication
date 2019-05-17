@@ -8,7 +8,6 @@ use app\im\exception\OperationFailureException;
 use think\Db;
 use app\im\model\GroupModel;
 use app\im\model\GroupsModel;
-use think\Cache;
 use app\im\service\SingletonServiceFactory;
 
 /**
@@ -43,7 +42,7 @@ class ContactController extends Controller
 
         if (!$isLogin) {
             if ($this->request->isAjax()) {
-                $this->success("您尚未登录", cmf_url("user/Login/index"));
+                $this->error("您尚未登录", cmf_url("user/Login/index"));
             } else {
                 $this->redirect(cmf_url("user/Login/index"));
             }
@@ -73,110 +72,6 @@ class ContactController extends Controller
             }
         }
         
-//         //检查分组是否存在
-//         if($this->checkNullGroups($id, null)){
-//             $this->success("没有该分组,请检查您的分组信息", "/", null, 0);
-//         }
-        
-//         Db::startTrans();
-//         try {
-            
-//             //查找将要删除分组下的好友id
-//             $contacts_id = Db::table('im_friends')
-//             ->where([
-//                 'user_id' => $this->user['id'],
-//                 'group_id' => $id
-//             ])
-//             ->field('contact_id')
-//             ->select();
-            
-//             //将好友移动到另一个分组
-//             foreach ($contacts_id as $value) {
-//                 Db::table('im_friends')
-//                 ->where([
-//                     'user_id' => $this->user['id'],
-//                     'contact_id' => $value['contact_id']
-//                 ])
-//                 ->update(['group_id' => $into]);
-//             }
-            
-//             //删除分组
-//             Db::table('im_friend_groups')
-//             ->where([
-//                 'id' => $id,
-//                 'user_id' => $this->user['id']
-//             ])
-//             ->delete();
-            
-//             Db::commit();
-//         } catch (\Exception $e) {
-//             Db::rollback();
-//             $this->success("噢噢~ 遇到问题了,请稍后重", "/", null, 0);
-//         }
-//         $this->error("删除分组成功", "/", null ,0);
-    }
-    
-    /**
-     * 退出群聊
-     * @param int $gid 群聊id
-     */
-    public function deleteMyGroup($gid) {
-        $reMsg = "";
-        $reData = "";
-        $failure = false;
-        try {
-            SingletonServiceFactory::getContactService()->leaveGroup($this->user["id"], $gid);
-            $reMsg = "退出成功";
-        } catch(OperationFailureException $e) {
-            $reMsg = $e->getMessage();
-            $failure = true;
-        } finally {
-            if ($failure) {
-                $this->success($reMsg, "/", $reData, 0);
-            } else {
-                $this->error($reMsg, "/", $reData, 0);
-            }
-        }
-        //         //查询出该群所有管理员的id
-        //         $adminIds = $this->queryGroupAdminById($gid);
-        
-        //         Db::startTrans();
-        //         try {
-        //             //群聊人数-1
-        //             $this->GroupsCount($gid, 0);
-        
-        //             //删除在群聊表中相关的信息
-        //             Db::table('im_groups')
-        //             ->where([
-        //                 'user_id' => $this->user['id'],
-        //                 'contact_id' => $gid
-        //             ])
-        //             ->delete();
-        
-        //             //为所有管理员生成成员变动通知
-        //             $imId = Db::table('im_msg_box')
-        //             ->insertGetId([
-        //                 'sender_id' => $this->user['id'],
-        //                 'send_date' => time(),
-        //                 'send_ip' => $this->user['last_login_ip'],
-        //                 'content' => '用户'.$this->user['nike_username'].'已退出群聊',
-        //             ]);
-        //             foreach ($adminIds as $value) {
-        //                 Db::table('im_msg_receive')
-        //                 ->insertAll([
-        //                     [
-        //                         'id' => $imId,
-        //                         'receiver_id' => $value['user_id'],
-        //                         'send_date' => time()
-        //                     ]
-        //                 ]);
-        //             }
-        //             Db::commit();
-        //         } catch (\Exception $e) {
-        //             Db::rollback();
-        //             $this->success("奥奥~ 遇到问题了，请稍后重试", "/", $e->getMessage(), 0);
-        //         }
-        //         $this->error('已退出群聊', '/', null, 0);
     }
     
     /**
@@ -228,39 +123,6 @@ class ContactController extends Controller
             }
         }
         
-//         //开启事务
-//         Db::startTrans();
-//         try {
-//             //查询出该群所有管理员的id
-//             $adminIds = $this->queryGroupAdminById($gid);
-            
-//             //在im_msg_box表加数据
-//             $imId = Db::table('im_msg_box')
-//             ->insertGetId([
-//                 'sender_id' => $this->user['id'],
-//                 'send_date' => time(),
-//                 'send_ip' => $this->user['last_login_ip'],
-//                 'content' => $content,
-//                 'type' => 2,
-//                 'corr_id' => $gid
-//             ]);
-            
-//             //在im_msg_receive表加数据
-//             foreach ($adminIds as $value) {
-//                 Db::table('im_msg_receive')
-//                 ->insert([
-//                     'id' => $imId,
-//                     'receiver_id' => $value['user_id'],
-//                     'send_date' => time()
-//                 ]);
-//             }
-            
-//             Db::commit();
-//         } catch (\Exception $e) {
-//             Db::rollback();
-//             $this->success('奥奥~ 遇到问题了，请稍后重试', '/', $e->getMessage(), 0);
-//         }
-//         $this->error('消息发送成功', '/' , null, 0);
     }
     
 
@@ -290,57 +152,27 @@ class ContactController extends Controller
     }
     
     /**
+     * 退出群聊
+     * @param int $gid 群聊id
+     */
+    public function deleteMyGroup($gid) {
+        try {
+            SingletonServiceFactory::getContactService()->deleteMyGroup($gid, $this->user);
+        } catch (\Exception $e) {
+            $this->success("退出群聊失败", "/", $e->getMessage(), 0);
+        }
+        $this->error('已退出群聊', '/', null, 0);
+    }
+    
+    /**
      * 邀请加入群聊
      * @param int $gid 群聊id
      * @param int $uid 用户id
      */
     public function postGroupMember($gid, $uid) {
-        //检查用户是否已经在群聊当中
-        $checkUser = Db::table('im_groups')
-        ->where([
-            'user_id' => $uid,
-            'contact_id' => $gid
-        ])
-        ->find();
-        
-        //检查邀请人是否在群聊中
-        $checkMy = Db::table('im_groups')
-        ->where([
-            'user_id' => $this->user['id'],
-            'contact_id' => $gid
-        ])
-        ->find();
-        if($checkUser){
-            throw new OperationFailureException("您邀请的人已在群聊中");
-        }
-        if(!$checkMy){
-            throw new OperationFailureException("您不在当前群聊中");
-        }
-        
-        Db::startTrans();
         try {
-            //在im_msg_box插入相关通知
-            $imId = Db::table('im_msg_box')
-            ->insertGetId([
-                'sender_id' => $this->user['id'],
-                'send_date' => time(),
-                'send_ip' => $this->user['last_login_ip'],
-                'content' => $this->user['nick_username'].'邀请您加入群聊',
-                'type' => 3,
-                'corr_id' => $uid,
-                'corr_id2' => $gid
-            ]);
-            
-            //在im_msg_receive插入相关通知
-            Db::table('im_msg_receive')
-            ->insert([
-                'id' => $imId,
-                'receiver_id' => $uid,
-                'send_date' => time(),
-            ]);
-            Db::commit();
+            SingletonServiceFactory::getContactService()->postGroupMember($gid, $uid, $this->user);
         } catch (\Exception $e) {
-            Db::rollback();
             $this->success('发送邀请失败，请稍后重试', '/' , $e->getMessage(), 0);
         }
         $this->error('发送邀请成功', '/' , null, 0);
@@ -369,49 +201,6 @@ class ContactController extends Controller
             }
         }
         
-//         Db::startTrans();
-//         try {
-//             //群聊人数-1
-//             $this->GroupsCount($gid, 0);
-            
-//             //删除im_groups对应关系数据
-//             Db::table('im_groups')
-//                 ->where([
-//                     'user_id' => $uid,
-//                     'contact_id' => $gid
-//                 ])
-//                 ->delete();
-            
-//             //查询被踢人昵称
-//             $uUserName = Db::table('cmf_user')
-//             ->where('id', $uid)
-//             ->value('nick_username');
-            
-//             //查询该群所有管理员id
-//             $adminIds = $this->queryGroupAdminById($gid);
-            
-//             //为所有管理员生成成员变动通知
-//             $imId = Db::table('im_msg_box')
-//             ->insertGetId([
-//                 'sender_id' => 0,
-//                 'send_date' => time(),
-//                 'content' => $uUserName.'已被管理员强制请出该群聊'
-//             ]);
-//             foreach ($adminIds as $value) {
-//                 Db::table('im_msg_receive')
-//                 ->insert([
-//                     'id' => $imId,
-//                     'receiver_id' => $value['user_id'],
-//                     'send_date' => time()
-//                 ]);
-//             }
-//             Db::rollback();
-//         } catch (\Exception $e) {
-//             Db::rollback();
-//             im_log("error", $e);
-//             $this->success('噢噢~ 遇到问题了，请稍后重试', '/' , $e->getMessage(), 0);
-//         }
-//         $this->error('已将该成员移除群聊', '/' , null, 0);
     }
 
     /**
@@ -419,53 +208,10 @@ class ContactController extends Controller
      * @param int $gid 群聊id
      */
     public function deleteGroup($gid) {
-        //查询解散者是否有权限
-        $checkPower = Db::table('im_group')
-        ->where([
-            'id' => $gid,
-            'admin_id' => $this->user['id']
-        ])
-        ->find();
-        
-        if(!$checkPower){
-            throw new OperationFailureException("对不起，您没有该权限");
-        }
-        
-        Db::startTrans();
         try {
-            //修改群聊解散时间为3天后
-            Db::table('im_group')
-            ->where('id', $gid)
-            ->update(['delete_time' => time()+3*60*60*24]);
-            
-            //为群聊中所有成员生成群聊解散消息
-            $imId = Db::table('im_msg_box')
-            ->insertGetId([
-                'sender_id' => 0,
-                'send_date' => time(),
-                'content' => '群聊将在3天后解散'
-            ]);
-            
-            //查询群聊所有成员
-            $groupUsersId = Db::table('im_groups')
-            ->where([
-                'contact_id' => $gid
-            ])
-            ->field('user_id')
-            ->select();
-            
-            foreach ($groupUsersId as $value) {
-                Db::table('im_msg_receive')
-                ->insert([
-                    'id' => $imId,
-                    'receiver_id' => $value['user_id'],
-                    'send_date' => time()
-                ]);
-            }
-            Db::commit();
+            SingletonServiceFactory::getContactService()->deleteGroup($gid, $this->user);
         } catch (\Exception $e) {
-            Db::rollback();
-            $this->success('噢噢~ 遇到问题了，请稍后重试', '/' , $e->getMessage(), 0);
+            $this->success($e->getMessage(), '/' , null, 0);
         }
         $this->error('已提交申请，群聊将在3天后解散', '/' , null, 0);
     }
@@ -507,25 +253,6 @@ class ContactController extends Controller
                 $this->error($reMsg, "/", $reData, 0);
             }
         }
-//         $data = null;
-//         //改自己 或 改别人 或 抛出异常数据不正确
-//         if($uid && $alias) {
-//             $data = $this->updateGroupUserName($gid, $this->user['id'], $alias);
-//         } else if(!$uid && !$alias){
-//             //判断用户是否为管理员 如果是就判断自己是否是群主
-//             if($admin){
-//                 if($this->queryMyPermi($gid) == 2){
-//                     $data = $this->updateGroupUserName($gid, $uid, $alias);
-//                 }else{
-//                     throw new OperationFailureException("对不起，您的权限不够");
-//                 }
-//             }else{
-//                 $data = $this->updateGroupUserName($gid, $uid, $alias);
-//             }
-//         }else{
-//             throw new OperationFailureException("对不起，数据有误");
-//         }
-//         $this->error('修改成功', '/', $data, 0);
     }
     
     /**
@@ -538,30 +265,9 @@ class ContactController extends Controller
      */
     public function putGroup($gid, $name = null, $desc = null, $avatar = null, $admin = null){
         $res = null;
-        
-        if($this->queryMyPermi($gid) != 2){
-            throw new OperationFailureException("对不起，您的权限不够");
-        }
-        
-        Db::startTrans();
         try {
-            Db::table('im_group')
-            ->where(['id' => $gid])
-            ->update([
-                'groupname' => $name,
-                'description' => $desc,
-                'avatar' => $avatar,
-                'admin_id' => $admin
-            ]);
-            
-            $res = Db::table('im_group')
-            ->where(['id' => $gid])
-            ->field('id,groupname,description,avatar,create_time AS createtime,admin_id AS admin,
-                    admin_count AS admincount,create_time AS createtime,member_count AS membercount')
-            ->select();
-            Db::commit();
+            $res = SingletonServiceFactory::getContactService()->putGroup($gid, $name, $desc, $avatar, $admin, $this->user);
         } catch (\Exception $e) {
-            Db::rollback();
             $this->success('修改失败', '/', $e->getMessage(), 0);
         }
         $this->success('修改成功', '/', $res, 0);
@@ -572,29 +278,14 @@ class ContactController extends Controller
      * 查询联系人
      */
     public function getFriend($keyword = null, $id = null, $no = 1, $count = 10) {
-        //如果参数不为空则模糊查询
-        if($id){
-            $userIds = Db::table('im_friends')
-            ->where(['user_id' => $this->user['id']])
-            ->field('contact_id')
-            ->select();
-            $res = Db::table('cmf_user')
-            ->whereIn('id', $userIds, 'or')
-            ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
-            ->page($no, $count)
-            ->select()
-            ->toArray();
-        }else if(is_string($keyword)){
-            $res = Db::table('cmf_user')
-            ->where(['id' => $keyword])
-            ->whereOr('user_nickname','like','%'.$keyword.'%')
-            ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
-            ->page($no, $count)
-            ->select()
-            ->toArray();
+        try {
+            $res = SingletonServiceFactory::getContactService()->getFriend($keyword, $id, $no, $count);
+            $res = $this->checkOnOrOff($res);
+        } catch (\Exception $e) {
+            im_log("error", $e);
+            $this->success('查询失败', '/', $e->getMessage(), 0);
         }
-        $res = $this->checkOnOrOff($res);
-        $this->error('', '/', $res, 0);
+        $this->error('查询成功', '/', $res, 0);
     }
     
     /**
@@ -702,22 +393,6 @@ class ContactController extends Controller
     }
     
     /**
-     * 为自己添加群聊
-     */
-//     public function postLinkGroup($id, $content) {
-//         $msg = "";
-//         try {
-//             $ip = $this->request->ip();
-//             $this->service->linkGroupMsg($this->user["id"], $id, $content, $ip);
-//             $this->error("", "/", null, 0);
-//         } catch (OperationFailureException $e) {
-//             $msg = $e->getMessage();
-//             $this->success($msg, "/", null, 0);
-//         }
-//         $this->error($msg, "/", null, 0);
-//     }
-    
-    /**
      * 新建一个好友分组
      * @param mixed $groupname
      */
@@ -746,21 +421,6 @@ class ContactController extends Controller
         $this->error($msg, "/", $data, 0);
     }
     
-    /**
-     * 为自己添加好友
-     */
-//     public function postLinkFriend($id, $friendGroupId, $content)
-//     {
-//         $msg = "";
-//         try {
-//             $ip = $this->request->ip();
-//             $this->service->linkFriendMsg($this->user["id"], $friendGroupId, $id, $content, $ip);
-//             $this->error("", "/", null, 0);
-//         } catch (OperationFailureException $e) {
-//             $msg = $e->getMessage();
-//         }
-//         $this->success($msg, "/", null, 0);
-//     }
 
     /**
          * 为自己删除好友
@@ -783,60 +443,6 @@ class ContactController extends Controller
                 $this->error($reMsg, "/", $reData, 0);
             }
         }
-//         Db::startTrans();
-//         try{
-//             //在im_msg_box和im_msg_receive加入系统通知
-//             $imId = Db::table('im_msg_box')
-//             ->insertGetId([
-//                 'sender_id' => 0,
-//                 'sender_date' => time(),
-//                 'content' => $this->user['nick_username'].'已和您解除好友关系',
-//             ]);
-//             Db::table('im_msg_receive')
-//             ->insert([
-//                 'id' => $imId,
-//                 'receiver_id' => $id,
-//                 'send_date' => time()
-//             ]);
-            
-//             //删除好友信息
-//             Db::table('im_friends')
-//             ->where([
-//                 'user_id' => $this->user['id'],
-//                 'contact_id' => $id
-//             ])
-//             ->delete();
-            
-//             Db::table('im_friends')
-//             ->where([
-//                 'user_id' => $id,
-//                 'contact_id' => $this->user['id']
-//             ])
-//             ->delete();
-            
-//             //查询好友所在分组返回id
-//             $oldgroupId = Db::table('im_friends')
-//             ->where([
-//                 'user_id' => $this->user['id'],
-//                 'contact_id' => $id
-//             ])
-//             ->field('group_id')
-//             ->select();
-            
-//             //旧分组人数-1
-//             Db::table('im_friend_groups')
-//             ->where([
-//                 'id' => $oldgroupId
-//             ])
-//             ->dec('member_count')
-//             ->update();
-            
-//             Db::commit();
-//         }catch (\Exception $e){
-//             Db::rollback();
-//             $this->success($e->getMessage(), "/", null, 0);
-//         }
-//         $this->error("删除成功", "/", null, 0);
     }
     
     /**
@@ -846,63 +452,22 @@ class ContactController extends Controller
      */
     public function putFriend($contact, $group=null, $alias=null)
     {
+        $service = SingletonServiceFactory::getContactService();
         if (is_string($alias)) {
             try {
-                $data = SingletonServiceFactory::getContactService()->updateFriend($this->user["id"], ["id"=>$contact, "alias"=> $alias]);
-                $this->error("", "/", $data, 0);
+                $data = $service->updateFriend($this->user["id"], ["id"=>$contact, "alias"=> $alias]);
             } catch (OperationFailureException $e) {
                 $this->success($e->getMessage(), "/", [], 0);
             }
+            $this->error("修改成功", "/", $data, 0);
+        }else{
+            try{
+                $service->putFriend($contact, $group, $this->user);
+            }catch (\Exception $e){
+                $this->success($e->getMessage(), "/", null, 0);
+            }
+            $this->error("移动成功", "/", null, 0);
         }
-        
-        //检查分组是否存在
-        if($this->checkNullGroups($group,null)){
-            $this->success("没有该分组,请检查您的分组信息", "/", null, 0);
-        }
-        
-        Db::startTrans();
-        try{
-            //查询好友所在分组返回id
-            $oldgroupId = Db::table('im_friends')
-            ->where([
-                'user_id' => $this->user['id'],
-                'contact_id' => $contact
-            ])
-            ->value('group_id');
-            
-            //旧分组人数-1
-            Db::table('im_friend_groups')
-            ->where([
-                'id' => $oldgroupId
-            ])
-            ->dec('member_count')
-            ->update();
-            
-            //将好友更换分组
-            Db::table('im_friends')
-            ->where([
-                'user_id' => $this->user['id'],
-                'contact_id' => $contact
-            ])
-            ->update([
-                'group_id' => $group
-            ]);
-            
-            //新分组人数+1
-            Db::table('im_friend_groups')
-            ->where([
-                'id' => $group
-            ])
-            ->inc('member_count')
-            ->update();
-            
-            Db::commit();
-        }catch (\Exception $e){
-            Db::rollback();
-            $this->success("噢噢~ 遇到问题了,请稍后重试", "/", null, 0);
-        }
-        $this->error("移动成功", "/", null, 0);
-        
     }
     
     /**
@@ -911,29 +476,14 @@ class ContactController extends Controller
      * @param string $name 新的名字
      */
     public function putFriendGroup($id, $name) {
+        $rsdate = null;
         
-        //检查分组是否存在
-        if($this->checkNullGroups($id, null)){
-            $this->success("没有该分组,请检查您的分组信息", "/", null, 0);
-        }
-        
-        Db::startTrans();
         try {
-            
-            Db::table('im_friend_groups')
-            ->where([
-                'id' => $id,
-                'user_id' => $this->user['id']
-            ])
-            ->update(['group_name' => $name]);
-            
-            Db::commit();
-            $this->success("噢噢~ 遇到问题了,请稍后重试", "/", null ,0);
+            $rsdate = SingletonServiceFactory::getContactService()->putFriendGroup($id, $name);
         } catch (\Exception $e) {
-            Db::rollback();
+            $this->success("修改分组名失败", "/", $e->getMessage() ,0);
         }
-        
-        $this->error("修改分组名成功", "/", null, 0);
+        $this->error("修改分组名成功", "/", $rsdate, 0);
     }
     
     /**
@@ -964,116 +514,14 @@ class ContactController extends Controller
     }
     
     /**
-     * 根据群聊id查询所有管理员
-     * @param int $gid 群聊id
-     * @return array 管理员id
-     */
-    private function queryGroupAdminById($gid) {
-        //查询出该群所有管理员的id
-        return Db::table('im_groups')
-        ->where([
-            'contact_id' => $gid,
-            'is_admin' => 1
-        ])
-        ->field('user_id')
-        ->select();
-    }
-    
-    /**
-     * 群聊人数+1或者-1
-     * @param int $gid 群聊id
-     * @param integer $str 为空表示逻辑失败,0表示群聊人数-1|1表示群聊人数+1
-     * @throws OperationFailureException 如果str为空抛出异常
-     */
-    private function GroupsCount($gid, $str = null) {
-        if(!is_numeric($str)){
-            throw new OperationFailureException("噢噢~ 遇到问题了,请稍后重试");
-        } else if ($str == 0) {
-            Db::table('im_group')
-            ->where('id', $gid)
-            ->dec('menber_count')
-            ->update();
-        } else {
-            Db::table('im_group')
-            ->where('id', $gid)
-            ->inc('menber_count')
-            ->update();
-        }
-    }
-    
-    /**
-     * 查询自己的权限
-     * @param int $gid
-     * @return number 0为成员|1为管理员|2为创建者
-     */
-    private function queryMyPermi($gid) {
-        $isAdmin = Db::table('im_group a,im_groups b')
-        ->where('a.id = b.contact_id')
-        ->where([
-            'b.user_id' => $this->user['id'],
-            'a.id' => $gid
-        ])
-        ->find();
-        
-        if($isAdmin['creator_id'] == $this->user['id']){
-            return 2;
-        }else if($isAdmin['is_admin'] == 1){
-            return 1;
-        }else{
-            return 0;
-        }
-    }
-    
-    /**
-     * 修改群成员名 并返回修改后的信息
-     * @param int $gid 群聊id
-     * @param int $id 用户id
-     * @param string $name 用户名字
-     */
-    private function updateGroupUserName($gid, $id, $name) {
-        //从缓存中取用户id是否在线
-        $status = cache('im_chat_online_user_list');
-        
-        $data = null;
-        Db::startTrans();
-        try {
-            Db::table('im_groups')
-            ->where([
-                'user_id' => $id,
-                'contact_id' => $gid
-            ])
-            ->update(['user_alias' => $name]);
-            
-            $data = Db::table('cmf_user a,im_groups b')
-                ->where('a.id = b.user_id')
-                ->where(['a.id' => $id])
-                ->where(['b.contact_id' => $gid])
-                ->field('b.user_alias AS username,a.id,a.avatar,a.signature AS sign,a.sex,b.is_admin AS isadmin')
-                ->find();
-            Db::commit();
-        } catch (\Exception $e) {
-            Db::rollback();
-        }
-        
-        //默认为不在线
-        $data['status'] = 'offline';
-        
-        //如果缓存中存在用户id就改成在线
-        foreach ($status as $value) {
-            if($data['id'] == $value){
-                $data['status'] = 'online';
-                break;
-            }
-        }
-        
-        return $data;
-    }
-    
-    /**
      * 验证用户是否在线 并加入status字段
      * @param array $data
      */
-    public function checkOnOrOff($data) {
+    private function checkOnOrOff($data) {
+        
+        if(!$data){
+            return null;
+        }
         //从缓存中取用户id是否在线
         $status = cache('im_chat_online_user_list');
         
@@ -1088,6 +536,13 @@ class ContactController extends Controller
                     continue;
                 }
                 
+            }
+            if($data[$i]['sex'] == 0){
+                $data[$i]['sex'] = '保密';
+            }else if($data[$i]['sex'] == 1){
+                $data[$i]['sex'] = '男';
+            }else{
+                $data[$i]['sex'] = '女';
             }
         }
         return $data;
