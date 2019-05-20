@@ -419,6 +419,8 @@ class ContactController extends Controller
      * @param int $gid 群聊id
      */
     public function deleteGroup($gid) {
+        $this->success("暂未开放", "/", null, 0);
+        return;
         //查询解散者是否有权限
         $checkPower = Db::table('im_group')
         ->where([

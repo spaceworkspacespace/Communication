@@ -6,12 +6,62 @@ use think\Db;
 
 class GroupModel extends IMModel implements IGroupModel {
     
+    public function createGroup($userId, $data) {
+        $now = time();
+        $data = array_index_pick($data, "groupname", "description",  "avatar");
+        $data = array_merge($data, [
+            "create_time"=>$now,
+            "admin_id"=>$userId,
+            "admin_count"=>1,
+            "creator_id"=>1,
+            "member_count"=>1
+        ]);
+        $data["id"] = Db::table("im_group")
+            ->insert($data, false, true);
+        
+        if (!is_numeric($data["id"])) {
+            return null;
+        }
+        
+        Db::table("im_groups")
+            ->insert([
+                "user_id"=>$userId,
+                "contact_id"=>$data["id"],
+                "is_admin"=>1,
+                "contact_date"=>$now,
+                "last_active_time"=>$now,
+                "last_send_time"=>$now,
+                "last_reads"=>0,
+                "last_visible"=>0
+            ]);
+        array_key_replace_force($data, [
+            "create_time"=> "createtime",
+            "admin_id"=> "admin", 
+            "admin_count" => "admincount",
+            "member_count" => "membercount"
+        ]);
+        return $data;
+        
+    }
+    
     public function deleteGroupMemberById($gid, ...$uid) {
         $uidStr = implode(",", $uid);
         $sql = "DELETE FROM `im_groups` WHERE `contact_id`=$gid AND `user_id` IN ($uidStr);";
         im_log("SQL", $sql);
         
         return Db::execute($sql);
+    }
+    
+    public function existsGroupByName($name) {
+        $count = Db::table("im_group")->where("groupname=:gname")
+            ->bind([
+                "gname"=>[$name, \PDO::PARAM_STR]
+            ])
+            ->count("groupname");
+        if ($count == 0) {
+            return 0;
+        }
+        return 1;
     }
     
     public function getGroupAdminIds($gid) {

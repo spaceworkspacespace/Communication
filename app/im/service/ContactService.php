@@ -162,69 +162,32 @@ class ContactService implements IContactService {
     
     public function createGroup($creator, string $groupName, string $pic, string $desc) {
         // 检查群名称是否已经存在.
-        if (count($this->getGroupByName($groupName))) {
+        if (ModelFactory::getGroupModel()->existsGroupByName($groupName)) {
             throw new OperationFailureException("名称已经存在.");
         }
         
-        $group = model("group")->getQuery();
-        $groups = model("groups")->getQuery();
-        $chatGroup = model("chat_group")->getQuery();
-        
         try {
-            $group->startTrans();
-            
             // 插入群组表
-            $groupId = $group->insert([
-                "groupname" => $groupName,
-                "description" => $desc,
-                "avatar" => $pic,
-                "creator_id" => $creator,
-                "create_time" => time(),
-                "admin_id" => $creator,
-                "admin_count" => 1,
-                "member_count"=>1
-            ], false, true);
-            
-            if (!is_numeric($groupId)) {
-                im_log("error", "创建群聊失败, id: ", $groupId);
-                throw new OperationFailureException("无法获取群聊 id.");
+            $group = ModelFactory::getGroupModel()
+                ->createGroup($creator, [
+                    "groupname"=>$groupName,
+                    "description"=>$desc,
+                    "avatar"=>$pic
+                ]);
+            if ($group == null) {
+                im_log("error", "创建群聊失败! creator: ", $creator, ", name: ", $groupName, ", pic: ", $pic, ", desc: ", $desc);
+                throw new OperationFailureException();
             }
-            
+            SingletonServiceFactory::getGatewayService()
+                ->sendToUser($creator, [array_merge($group, ["type"=> "group"])], IGatewayService::ADD_TYPE);
             // 插入群聊信息
-            $chatId = $chatGroup->insert([
-                "group_id"=>$groupId,
-                "sender_id"=>0,
-                "send_date"=>time(),
-                "content"=>implode(["用户 ", $creator, " 加入了群聊."])
-            ], false, true);
+            SingletonServiceFactory::getChatService()->sendToGroup($creator, $group["id"], "Hello~");
             
-            if (!is_numeric($chatId)) {
-                im_log("error", "插入群信息失败, id: ", $chatId);
-                throw new OperationFailureException("无法获取群聊 id.");
-            }
-            
-            $groups->insert([
-                "user_id" => $creator,
-                "contact_id" => $groupId,
-                "is_admin" => 1,
-                "contact_date" => time(),
-                "last_active_time" => time(),
-                "last_send_time" => time(),
-                "last_reads" => $chatId
-            ]);
-            $group->commit();
-            
-            // 通知前端做出反应
-            GatewayServiceImpl::addToUid($creator, [[
-                "type"=>"group",
-                "avatar" => $pic,
-                "groupname" => $groupName,
-                "id"=>$groupId
-            ]]);
-            im_log("info", "创建群聊成功. 用户: ", $creator, "; 群聊: ", $groupId, ", ", $groupName);
-        } catch (\Exception $e) {
+            im_log("info", "创建群聊成功. 用户: ", $creator, "; 群聊: ", $group);
+        } catch(OperationFailureException $e) {
+            throw $e;
+         }catch (\Exception $e) {
             im_log("error", "创建群聊失败 !", "错误信息: ", $e);
-            $group->rollback();
             throw new OperationFailureException("群聊创建失败, 请稍后重试~");
         }
     }

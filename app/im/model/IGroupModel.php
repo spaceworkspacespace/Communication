@@ -4,11 +4,25 @@ namespace app\im\model;
 interface IGroupModel {
     
     /**
+     * 创建一个群聊
+     * @param mixed $userId
+     * @param mixed $data { groupname, description?,  avatar }
+     */
+    public function createGroup($userId, $data) ;
+    
+    /**
      * 删除指定群聊中的成员
      * @param mixed $gid
      * @param mixed ...$uid
      */
     public function deleteGroupMemberById($gid, ...$uid) ;
+    
+    /**
+     * 通过群聊的名称判断是否存在
+     * @param string $name
+     * @return boolean
+     */
+    public function existsGroupByName($name) ;
     
     /**
      * 获取群聊中的管理员的 id
