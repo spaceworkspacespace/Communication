@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    // "rootDir": "./src/service",
+    // "outDir": "./src/service",
+    // "rootDir": "./src",
+    "outDir": "./dist/ts",
+    "noImplicitAny": true,
+    "module": "es6",
+    "target": "es5",
+    "jsx": "react",
+    "allowJs": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "lib": [
+      "dom",
+      "es5",
+      "es6",
+      "es2015",
+    ],
+    // "moduleResolution": "classic",
+  }
+}

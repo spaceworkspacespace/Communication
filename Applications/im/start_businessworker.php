@@ -23,9 +23,9 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 // bussinessWorker 进程
 $worker = new BusinessWorker();
 // worker名称
-$worker->name = 'im';
+$worker->name = 'IM';
 // bussinessWorker进程数量
-$worker->count = 2;
+$worker->count = 4;
 // 服务注册地址
 $worker->registerAddress = '127.0.0.1:1238';
 

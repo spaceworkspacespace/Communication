@@ -13,11 +13,12 @@ $minResendTime = 5; // 当发送时间过去多少秒后可以重发
 Gateway::$registerAddress = "0.0.0.0:1238";
 $hashName = "im_chat_last_send_time_hash";
 $listName = "im_chat_resend_list";
+$onlineListName = "im_chat_online_user_set";
 $cache = new \Redis();
 $cache->connect("192.168.0.80");
 
 function resend() {
-    global $cache, $hashName, $listName, $maxResend, $minResendTime;
+    global $cache, $hashName, $listName, $maxResend, $minResendTime,$onlineListName;
     $msgSign = $cache->rawCommand("LINDEX", $listName, "-1");
     // 缓存没有数据
     if (!$msgSign) return;

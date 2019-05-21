@@ -1,0 +1,46 @@
+body, div, span, header, footer, nav, section, aside, article, ul, dl, dt, dd, li, a, p, h1, h2, h3, h4,h5, i, b, textarea, button, input, select  {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    font-style: normal;
+    text-decoration: none;
+    border: none;
+    color: #313131;
+    box-sizing: border-box;
+    font-weight: lighter;
+    /* font-family: 'Microsoft YaHei'; */
+    -webkit-tap-highlight-color:transparent;
+    border-width: 0;
+}
+
+input:focus {
+    outline: none;
+}
+
+html {
+    font-size: 10px;
+}
+
+html, body{
+    height: 100%;
+    width: 100%;
+}
+
+body * {
+    font-size: 0.14rem;
+}
+
+div {
+    /* display: flex; */
+    flex-shrink: 0;
+    flex-direction: column;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+a {
+    color: aqua;
+}
