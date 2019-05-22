@@ -3,6 +3,7 @@
 namespace app\im\model;
 use think\Db;
 use think\Model;
+use app\im\exception\OperationFailureException;
 
 class MsgBoxModel extends Model implements IMessageModel {
     protected $connection = [
@@ -467,4 +468,19 @@ SQL;
     {
         return $this->belongsTo('UserModel','sender_id');
     }
+    
+    public function deleteIndex($id)
+    {
+        Db::table('im_msg_receive')
+        ->where(['id' => $id])
+        ->update(['visible' => 0]);
+    }
+    public function postFeedBack($id)
+    {
+        Db::table('im_msg_receive')
+        ->where(['id' => $id])
+        ->update(['read' => 1]);
+    }
+
+
 }

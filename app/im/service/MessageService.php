@@ -191,4 +191,39 @@ class MessageService implements IMessageService {
             throw new OperationFailureException();
         }
     }
+    public function deleteIndex($id)
+    {
+        $model = ModelFactory::getMessageModel();
+        Db::startTrans();
+        try {
+            //删除消息
+            $model->deleteIndex($id);
+            Db::commit();
+        }catch (OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            throw new OperationFailureException();
+        }
+    }
+    
+    public function postFeedBack($id)
+    {
+        $model = ModelFactory::getMessageModel();
+        Db::startTrans();
+        try {
+            //删除消息
+            $model->postFeedBack($id);
+            Db::commit();
+        }catch (OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            throw new OperationFailureException();
+        }
+    }
+
+
 }

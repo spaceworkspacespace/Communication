@@ -28,5 +28,15 @@ interface IMessageService {
      */
     public function positiveHandle($userId, $msgId, $args) ;
     
+    /**
+     * 消息删除
+     * @param int $id 消息id
+     */
+    public function deleteIndex($id) ;
     
+    /**
+     * 消息已读处理
+     * @param int $id 消息id
+     */
+    public function postFeedBack($id) ;
 }

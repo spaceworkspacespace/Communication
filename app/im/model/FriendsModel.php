@@ -112,6 +112,18 @@ class FriendsModel extends IMModel implements IFriendModel {
         return $effect;
     }
     
+    public function putFriendGroup($id, $name) {
+        Db::table('im_friend_groups')
+        ->where([
+            'id' => $id
+        ])
+        ->update(['group_name' => $name]);
+        
+        return Db::table('im_friend_groups')
+        ->where('id', $id)
+        ->find('id,group_name AS groupname,priority,create_time AS createtime,member_count AS membercount');
+    }
+    
     public function determineFriendGroupByName($userId, ...$name) {
         // 查询
         $fgroup = Db::table("im_friend_groups")
@@ -216,7 +228,7 @@ class FriendsModel extends IMModel implements IFriendModel {
         $friends = [];
         $resultSet = $this->getQuery()
             ->alias("f")
-            ->field("u.id AS id, u.user_nickname AS username, u.avatar, u.signature AS sign, u.sex,
+            ->field("u.id AS id, f.contact_alias AS username, u.avatar, u.signature AS sign, u.sex,
              g.group_name AS groupname, g.id AS groupid, g.priority, g.create_time AS createtime, g.member_count AS membercount")
             ->join(["im_friend_groups"=>"g"], "f.group_id=g.id AND g.user_id=f.user_id", "RIGHT OUTER")
             ->join(["cmf_user"=>"u"], "f.contact_id=u.id", "LEFT OUTER")
@@ -367,7 +379,7 @@ SQL;
         return $count;
     }
     
-    public function setFriend($uid, $fgId, $uid1, $fgId1) {
+    public function setFriend($uid, $fgId, $uUserName, $uid1, $fgId1, $uUserName1) {
         $now = time();
         $maxId = ModelFactory::getChatFriendModel()->getMaxIdByUser($uid, $uid1);
         $effect = Db::table("im_friends")
@@ -375,6 +387,7 @@ SQL;
                 [
                     "user_id"=>$uid,
                     "contact_id"=>$uid1,
+                    'contact_alias'=>$uUserName1, //他的名字
                     "group_id"=>$fgId,
                     "contact_date"=>$now,
                     "last_active_time"=>$now,
@@ -384,6 +397,7 @@ SQL;
                 ], [
                     "user_id"=>$uid1,
                     "contact_id"=>$uid,
+                    'contact_alias'=>$uUserName,
                     "group_id"=>$fgId1,
                     "contact_date"=>$now,
                     "last_active_time"=>$now,
@@ -446,4 +460,48 @@ SQL;
         }
         return [];
     }
+    
+    public function putFriend($contact, $group, $user)
+    {
+        //将好友更换分组
+        Db::table('im_friends')
+        ->where([
+            'user_id' => $user['id'],
+            'contact_id' => $contact
+        ])
+        ->update([
+            'group_id' => $group
+        ]);
+    }
+    
+    public function FriendGroupCount($gid, $str)
+    {
+        if(is_numeric($str) && $str == 0){
+            Db::table('im_friend_groups')
+            ->where([
+                'id' => $gid
+            ])
+            ->dec('member_count')
+            ->update();
+        }else if(is_numeric($str) && $str == 1){
+            Db::table('im_friend_groups')
+            ->where([
+                'id' => $gid
+            ])
+            ->inc('member_count')
+            ->update();
+        }
+    }
+    public function queryFriendGroupByFriendId($id, $user)
+    {
+        return Db::table('im_friends')
+        ->where([
+            'user_id' => $user['id'],
+            'contact_id' => $id
+        ])
+        ->value('group_id');
+    }
+
+
+
 }

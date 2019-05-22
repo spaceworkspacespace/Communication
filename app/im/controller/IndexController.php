@@ -35,7 +35,7 @@ class IndexController extends HomeBaseController
 //         }
         // service
 //         $this->service = IMServiceImpl::getInstance();
-//         $this->checkUserLogin();
+   //         $this->checkUserLogin();
     }
 
     public function index() {
@@ -57,7 +57,6 @@ class IndexController extends HomeBaseController
     public function index2() {
         return $this->fetch("/i2");
     }
-    
     public function index3() {
         return $this->fetch("/i3");
     }

@@ -6,7 +6,6 @@ use app\im\exception\OperationFailureException;
 use app\im\model\IMessageModel;
 use app\im\model\ModelFactory;
 use think\Db;
-use think\db\Query;
 
 class ContactService implements IContactService {
     const failureMsg = "操作失败, 请稍后重试～";
@@ -15,6 +14,10 @@ class ContactService implements IContactService {
         im_log("debug", 2);
         try {
             im_log("debug", "开始添加好友 $id1 $fgId1, $id2 $fgId2");
+            //获取用户信息
+            $user = ModelFactory::getUserModel()->getUserById($id1, $id2);
+            $user1 = $user[0];
+            $user2 = $user[1];
             // 判断是否已经是好友关系
             if (ModelFactory::getFriendModel()->isFriend($id1, $id2)) {
                 throw new OperationFailureException("你们已经是好友了.");
@@ -29,7 +32,7 @@ class ContactService implements IContactService {
             }
             Db::startTrans();
             // 添加好友
-            if (!ModelFactory::getFriendModel()->setFriend($id1, $fgId1, $id2, $fgId2)) {
+            if (!ModelFactory::getFriendModel()->setFriend($id1, $fgId1, $user1['username'], $id2, $fgId2, $user2['username'])) {
                 im_log("error", "好友设置失败.");
                 throw new OperationFailureException();
             }
@@ -42,9 +45,6 @@ class ContactService implements IContactService {
             ]);
             Db::commit();
             // 推送添加命令
-            $user = ModelFactory::getUserModel()->getUserById($id1, $id2);
-            $user1 = $user[0];
-            $user2 = $user[1];
             SingletonServiceFactory::getGatewayService()
                 ->addToUid($id2, [[
                     "type"=>"friend",
@@ -298,6 +298,27 @@ class ContactService implements IContactService {
         }
     }
     
+    public function putFriendGroup($id, $name)  {
+        $rsdate = null;
+        $model = ModelFactory::getFriendModel();
+        Db::startTrans();
+        try {
+            //检查分组是否存在
+            if(!$model->getFriendGroupById($id)){
+                throw new OperationFailureException("分组不存在");
+            }
+            $rsdate = $model->putFriendGroup($id, $name);
+            Db::commit();
+            return $rsdate;
+        } catch (OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            throw new OperationFailureException($e);
+        }
+    }
+    
     public function deleteGroupMember($userId, $gid, $uid) {
         try {
             foreach([$userId, $gid, $uid] as $m) {
@@ -397,9 +418,8 @@ class ContactService implements IContactService {
         try {
             return model("group")->getQuery()
             ->where("id", "=", $condition)
-            ->union(function(Query $q) use($condition) {
-                $q->table("im_group")->where("groupname", "LIKE", "%$condition%");
-            })
+            ->whereOr('groupname', 'LIKE', '%'.$condition.'%')
+            ->field('id,groupname,description,avatar,create_time AS createtime,admin_id AS admin,admin_count AS admincount,member_count AS membercount')
             ->page($pageNo, $pageSize)
             ->select()
             ->toArray();
@@ -577,53 +597,6 @@ class ContactService implements IContactService {
         }
     }
     
-    public function leaveGroup($userId, $groupId, $remark = "") {
-        try {
-            foreach([$userId, $groupId] as $m) {
-                if (!is_numeric($m)) {
-                    throw new OperationFailureException("参数错误");
-                }
-            }
-            // 判断用户是否有指定群聊
-            if (!ModelFactory::getGroupModel()->inGroup($userId, $groupId)) {
-                throw new OperationFailureException("群聊不存在");
-            }
-            Db::startTrans();
-            // 删除群聊关系
-            ModelFactory::getGroupModel()->deleteGroupMemberById($groupId, $userId);
-            // 更新群聊用户
-            ModelFactory::getGroupModel()->updateGroup($groupId, [
-                "admin_count"=>ModelFactory::getGroupModel()
-                    ->getGroupMemberCount($groupId)
-            ]);
-            // 生成管理员通知
-            $data = [
-                "sender_id"=>0,
-                "send_date"=>time(),
-                "content"=>"",
-                "type"=>IMessageModel::TYPE_GROUPMEMBER_LEAVE,
-                "corr_id"=>$userId,
-                "corr_id2"=>$groupId
-            ];
-            $admins = ModelFactory::getGroupModel()->getGroupAdminIds($groupId);
-            ModelFactory::getMessageModel()->createMessage($data, $admins);
-            Db::commit();
-            foreach($admins as $id) {
-                SingletonServiceFactory::getPushService()->pushMsgBoxNotification($id);
-            }
-            // 移除群聊命令
-            SingletonServiceFactory::getGatewayService()
-                ->sendToUser($userId, [["id"=>$groupId]], IGatewayService::TYPE_GROUP_REMOVE);
-        } catch (OperationFailureException $e) {
-            Db::rollback();
-            throw $e;
-        } catch(\Exception $e) {
-            Db::rollback();
-            im_log("error", $e);
-            throw new OperationFailureException();
-        }
-    }
-    
     /**
      * 更新好友信息
      * @param mixed $userId 用户
@@ -631,29 +604,40 @@ class ContactService implements IContactService {
      * @return array 更新后的信息
      */
     public function updateFriend($userId, $friend) {
+        Db::startTrans();
+        try {
+            if (!isset($friend["id"])) {
+                throw new OperationFailureException("未确定好友.");
+            }
+            $data = ["contact_id"=>$friend["id"]];
+            if (isset($friend["alias"])) {
+                $data["contact_alias"] = $friend["alias"];
+            }
+            // 判断存在分组参数, 且用户拥有此分组
+            if (isset($friend["group"]) && model("friend_groups")->getFriendGroup($userId, $friend["group"])) {
+                $data["group_id"] = $friend["group"];
+            }
+            if (count($data) == 0) {
+                return [];
+            }
+            if (model("friends")->updateFriend($userId, $data)) {
+                return [
+                    "id"=>$data["contact_id"],
+                    "alias"=>$data["contact_alias"]
+                ];
+            } else {
+                return null;
+            }
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch(\Exception $e) {
+            Db::rollback();
+            im_log("error", "消息插入失败 !", $e);
+            throw new OperationFailureException("消息发送失败 !");
+        }
         
-        if (!isset($friend["id"])) {
-            throw new OperationFailureException("未确定好友.");
-        }
-        $data = ["contact_id"=>$friend["id"]];
-        if (isset($friend["alias"])) {
-            $data["contact_alias"] = $friend["alias"];
-        }
-        // 判断存在分组参数, 且用户拥有此分组
-        if (isset($friend["group"]) && model("friend_groups")->getFriendGroup($userId, $friend["group"])) {
-            $data["group_id"] = $friend["group"];
-        }
-        if (count($data) == 0) {
-            return [];
-        }
-        if (model("friends")->updateFriend($userId, $data)) {
-            return [
-                "id"=>$data["contact_id"],
-                "alias"=>$data["contact_alias"]
-            ];
-        } else {
-            return null;
-        }
     }
     
     public function updateGroupMember($uid, $gid, $data)  {
@@ -740,4 +724,146 @@ class ContactService implements IContactService {
             throw new OperationFailureException(static::failureMsg);
         }
     }
+    
+    public function getFriend($keyword, $id, $no, $count) {
+        $rsdate = null;
+        $model = ModelFactory::getUserModel();
+        //如果参数不为空则模糊查询
+        if($id){
+            $rsdate = $model->getFriendById($id);
+        }else if(is_string($keyword)){
+            $rsdate = $model->getFriendByIdOrName($keyword, $no, $count);
+        }else if(!$id && !$keyword){
+            $rsdate = $model->getMyFriendInfo($this->user['id'], $no, $count);
+        }
+        return $rsdate;
+    }
+    
+    public function deleteMyGroup($gid, $user)
+    {
+        $model = ModelFactory::getGroupModel();
+        Db::startTrans();
+        try {
+            //群聊人数减1
+            $model->GroupsCount($gid, 0);
+            //退出群聊
+            $model->deleteMyGroup($gid, $user);
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("debug", $e->getMessage());
+            throw new OperationFailureException($e);
+        }
+        
+    }
+    
+    public function postGroupMember($gid, $uid ,$user)
+    {
+        $model = ModelFactory::getGroupModel();
+        Db::startTrans();
+        try {
+            //判断用户是否在群聊中
+            $check1 = $model->inGroup($uid, $gid);
+            //判断邀请人是否在群聊中
+            $check2 = $model->inGroup($user['id'], $gid);
+            if($check1){
+                throw new OperationFailureException("您邀请的人已在群聊中");
+            } else if(!$check2){
+                throw new OperationFailureException("您不在当前群聊中");
+            }
+            $model->postGroupMember($gid, $uid, $user);
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException($e);
+        }
+    }
+    
+    public function putGroup($gid, $name, $desc, $avatar, $admin, $user)
+    {
+        $res = null;
+        $model = ModelFactory::getGroupModel();
+        Db::startTrans();
+        try {
+            //判断是否有权限
+            if($model->queryMyPermi($user['id'], $gid) != 2){
+                throw new OperationFailureException("对不起，您的权限不够");
+            }
+            //修改群聊
+            $res = $model->putGroup($gid, $name, $desc, $avatar, $admin);
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException($e);
+        }
+        return $res;
+    }
+    
+    public function deleteGroup($gid, $user)
+    {
+        $model = ModelFactory::getGroupModel();
+        Db::startTrans();
+        try {
+            //判断是否有权限
+            if($model->queryMyPermi($user['id'], $gid) != 2){
+                throw new OperationFailureException("对不起，您的权限不够");
+            }
+            if($model->queryGroupDissolve($gid)){
+                throw new OperationFailureException("请勿重复提交申请");
+            }
+            //解散群聊
+            $model->deleteGroup($gid);
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException($e);
+        }
+    }
+    
+    public function putFriend($contact, $group, $user)
+    {
+        $model = ModelFactory::getFriendModel();
+        Db::startTrans();
+        try {
+            //检查分组是否存在
+            if(!$model->getFriendGroupById($group)){
+                throw new OperationFailureException("分组不存在");
+            }
+            //查询好友所在分组
+            $oldfriendgroup = $model->queryFriendGroupByFriendId($contact, $user);
+            //旧分组人数-1
+            $model->FriendGroupCount($oldfriendgroup, 0);
+            //移动好友
+            $model->putFriend($contact, $group, $user);
+            //新分组人数+1
+            $model->FriendGroupCount($group, 1);
+            Db::commit();
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException($e);
+        }
+    }
+
+
+    
+
 }
