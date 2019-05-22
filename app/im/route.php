@@ -2,15 +2,41 @@
 
 use think\Route;
 
-Route::group("im", function() {
-    // 联系人操作
-    Route::controller("contact", "im/contact");
-    Route::controller("chat", "im/chat");
-    Route::controller("message", "im/msgbox");
-    Route::controller("user", "im/user");
-    Route::controller("comm", "im/comm");
+
+
+
+// 联系人操作
+
+Route::group("im", function () {
+    Route::controller("contact", "contact");
+    Route::controller("chat", "chat");
+    Route::controller("message", "msgbox");
+    Route::controller("user", "user");
+    Route::controller("comm", "comm");
+    Route::controller("test", "test");
+    
+    Route::any('comment/:name',"comment/:name");
+    Route::any('favorite/:name',"favorite/:name");
+    Route::any('index/:name',"index/:name");
+    Route::any("login/:name", "login/:name");
+    Route::any("register/:name", "register/:name");
+    Route::any("profile/:name", "profile/:name");
 });
-Route::controller("test", "im/test");
+
+
+// 加域名路由之前
+// Route::group("im", function() {
+//     // 联系人操作
+//     Route::controller("contact", "im/contact");
+//     Route::controller("chat", "im/chat");
+//     Route::controller("message", "im/msgbox");
+//     Route::controller("user", "im/user");
+//     Route::controller("comm", "im/comm");
+// });
+// Route::controller("test", "im/test");
+
+
+
 // Route::any("test", "im/test");
 
 // im/friend/query/:id

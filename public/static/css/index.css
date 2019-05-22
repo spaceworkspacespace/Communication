@@ -1,0 +1,145 @@
+body {
+    height: 100vh;
+    width: 100vw;
+    /* overflow: hidden; */
+}
+
+div {
+    flex-shrink: 0;
+}
+
+/* 对一级导航样式的调整 */
+
+#nav-columns .nav-link.show {
+    background-color: transparent;
+    color: rgba(255, 255, 255, .5);
+}
+
+#nav-columns .nav-link.active {
+    color: rgba(255, 255, 255, 1);
+}
+
+/* 左侧二级导航的样式 */
+
+.nav-secondary .nav-item {
+    display: flex;
+    /* flex-grow: 1; */
+    flex-shrink: 0;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-right: 15px;
+    align-items: center;
+    cursor: pointer;
+    background-color: var(--secondary);
+    margin: 1px 0 0;
+    transition: background-color .3s ease-in 0s;
+}
+
+.nav-secondary .nav-item.x-light, .nav-secondary .x-light .nav-item {
+    background-color: rgba(192, 192, 192, .5);
+}
+.nav-secondary .nav-item:hover {
+    background-color: rgba(192, 192, 192, .5);
+}
+.nav-secondary .nav-item.x-sub-item {
+    padding-right: 0;
+    display: none;
+    background-color: transparent;
+}
+
+.nav-secondary .x-sub-item.x-show {
+    display: flex;
+}
+
+.nav-secondary .nav {
+    display: flex;
+    flex-grow: 1;
+}
+
+.nav-secondary>.nav{
+	background-color: white;
+}
+
+.nav-secondary .nav-item>span {
+    transition: transform .15s ease-in;
+}
+
+.nav-secondary .nav-item.x-show>span {
+    transform: rotate(90deg);
+}
+
+.nav-secondary .nav-item a, .nav-secondary .nav-item span {
+    color: whitesmoke;
+}
+
+/* 一级主体内容的布局 */
+
+.tab-content>.tab-pane.active {
+    display: flex;
+    flex: 1;
+    position: relative;
+    flex-shrink: 0;
+    --nav-secondary-width: 240px;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+.nav-secondary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--nav-secondary-width);
+    display: flex;
+    flex-direction: row;
+    overflow: visible;
+    z-index: 101;
+    /*background-color: white;*/
+}
+
+.nav-secondary.x-hide {
+    left: -240px;
+}
+
+.nav-secondary.x-hide .x-nav-expansion>span {
+    transform: translateX(110%) rotate(180deg);
+    transition: transform .25s ease-in-out, opacity .15s;
+    opacity: 0.2;
+}
+
+.nav-secondary.x-hide .x-nav-expansion>span:hover {
+    opacity: 0.8;
+}
+
+.content-secondary {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    left: var(--nav-secondary-width);
+    z-index: 100;
+    overflow: auto;
+    flex-direction: column;
+}
+
+.content-secondary.x-full {
+    left: 0;
+}
+
+.x-nav-expansion {
+    padding-top: 25px;
+}
+
+.x-nav-expansion>span {
+    transition: transform .25s ease-in-out;
+}
+
+.nav-secondary, .content-secondary {
+    transition: left .25s ease-in-out;
+}
+
+@media screen and (max-width: 768px) {
+    .content-secondary {
+        left: 0;
+    }
+}

@@ -46,9 +46,6 @@ class UserController extends Controller {
         Gateway::bindUid($clientId, $uid);
         $group = SingletonServiceFactory::getContactService()->getGroupByUser($uid);
         
-        // 在线处理
-        $cache = RedisModel::getRedis();
-        $cache->rawCommand("LPUSH", config("im.cache_chat_online_user_key"), $uid);
         // 加密对象
         $security = SecurityService::getInstance();
         // 用户所持有的密钥
@@ -72,6 +69,9 @@ class UserController extends Controller {
      * 获取用户信息
      */
     public function getInfo() {
+        // 在线处理
+        $cache = RedisModel::getRedis();
+        $cache->rawCommand("SADD", config("im.cache_chat_online_user_key"), $this->userId);
 //         var_dump(cmf_get_current_user());
         $user = cmf_get_current_user();
         $user = [

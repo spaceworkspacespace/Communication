@@ -22,7 +22,7 @@ use GatewayWorker\Lib\Gateway;
 
 $onlineListName = "im_chat_online_user_set";
 $cache = new \Redis();
-$cache->connect("192.168.0.80");
+$cache->connect("127.0.0.1");
 
 class MessageType
 {

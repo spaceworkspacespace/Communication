@@ -15,7 +15,7 @@ $hashName = "im_chat_last_send_time_hash";
 $listName = "im_chat_resend_list";
 $onlineListName = "im_chat_online_user_set";
 $cache = new \Redis();
-$cache->connect("192.168.0.80");
+$cache->connect("127.0.0.1");
 
 function resend() {
     global $cache, $hashName, $listName, $maxResend, $minResendTime,$onlineListName;

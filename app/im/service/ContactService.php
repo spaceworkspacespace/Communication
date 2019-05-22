@@ -388,7 +388,7 @@ class ContactService implements IContactService {
     {
         $data = model("friends")->getFriendAndGroup($userId);
         if (!is_array($data) || count($data) == 0) {
-            $data = $this->createFriendGroup($userId, "我的好友");
+            $data = [$this->createFriendGroup($userId, "我的好友")];
         }
         return $data;
     }

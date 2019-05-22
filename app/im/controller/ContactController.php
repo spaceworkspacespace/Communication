@@ -595,7 +595,12 @@ class ContactController extends Controller
             ->select()
             ->toArray();
         }
-        $res = $this->checkOnOrOff($res);
+        // $res = $this->checkOnOrOff($res);
+        // 绑定用户在线状态
+        foreach($res as &$u) {
+            $u["status"] = SingletonServiceFactory::getUserService()
+                ->isOnline($u["id"]);
+        }
         $this->error('', '/', $res, 0);
     }
     
@@ -1076,6 +1081,9 @@ class ContactController extends Controller
      * @param array $data
      */
     public function checkOnOrOff($data) {
+        if (!is_array($data)) {
+            return;
+        }
         //从缓存中取用户id是否在线
         $status = cache('im_chat_online_user_list');
         

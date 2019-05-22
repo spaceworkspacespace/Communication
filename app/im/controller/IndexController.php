@@ -62,6 +62,16 @@ class IndexController extends HomeBaseController
         return $this->fetch("/i3");
     }
     
+    /**
+     * 退出登录
+     */
+    public function logout()
+    {
+        var_dump("123");
+        session("user", null);//只有前台用户退出
+        return redirect($this->request->root() . "/");
+    }
+    
 //     public function find()
 //     {
 //         if ($this->request->isMobile()) {
