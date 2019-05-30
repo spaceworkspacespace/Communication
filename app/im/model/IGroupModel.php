@@ -122,6 +122,12 @@ interface IGroupModel {
     public function deleteGroup($gid) ;
     
     /**
+     * 删除群聊
+     * @param int $gid
+     */
+    public function deleteGroups($gid) ;
+    
+    /**
      * 查询群聊是否解散
      * @param int $gid 群聊id
      */
@@ -132,4 +138,9 @@ interface IGroupModel {
      * @param string $groupName 群聊名称
      */
     public function getGroupByName($groupName) ;
+    
+    /**
+     * 查询已经提交解散的群聊信息
+     */
+    public function queryDeleteGroup() ;
 }

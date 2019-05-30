@@ -496,6 +496,46 @@ SQL;
         }
     }
     
+    public function deleteGroups($gid)
+    {
+        
+        $groupname = Db::table('im_group')
+        ->where('id', '=', $gid)
+        ->value('groupname');
+        
+        //为群聊中所有成员生成群聊解散消息
+        $imId = Db::table('im_msg_box')
+        ->insertGetId([
+            'sender_id' => 0,
+            'send_date' => time(),
+            'type' => 0,
+            'content' => '群聊'.$groupname.'已解散'
+        ]);
+        
+        //查询群聊所有成员
+        $groupUsersId = Db::table('im_groups')
+        ->where([
+            'contact_id' => $gid
+        ])
+        ->field('user_id')
+        ->select();
+        
+        foreach ($groupUsersId as $value) {
+            Db::table('im_msg_receive')
+            ->insert([
+                'id' => $imId,
+                'receiver_id' => $value['user_id'],
+                'send_date' => time()
+            ]);
+            //为所有群成员推送通知
+            SingletonServiceFactory::getPushService()->pushMsgBoxNotification($value['user_id']);
+        }
+        
+        Db::table('im_group')
+        ->where('id', '=', $gid)
+        ->delete();
+    }
+    
     public function queryGroupDissolve($gid)
     {
         return Db::table('im_group')
@@ -510,8 +550,15 @@ SQL;
         ->select()
         ->toArray();
     }
-
-
+    
+    public function queryDeleteGroup()
+    {
+        return Db::table('im_group')
+        ->where('delete_time IS NOT NULL')
+        ->field('id, delete_time as deletetime')
+        ->select()
+        ->toArray();
+    }
 
 
 }

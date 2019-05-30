@@ -835,6 +835,30 @@ class ContactService implements IContactService {
         }
     }
     
+    public function deleteGroups()
+    {
+        $model = ModelFactory::getGroupModel();
+        Db::startTrans();
+        try {
+            //查询出已经提交申请的群组
+            $data = $model->queryDeleteGroup();
+            for ($i = 0; $i < count($data)-1; $i++) {
+                if($data[$i]['deletetime']+60*60*24*3 <= time()){
+                    //删除群聊
+                    $model->deleteGroups($data[$i]['id']);
+                    Db::commit();
+                }
+            }
+        } catch(OperationFailureException $e) {
+            Db::rollback();
+            throw $e;
+        } catch (\Exception $e) {
+            Db::rollback();
+            im_log("error", $e);
+            throw new OperationFailureException($e);
+        }
+    }
+    
     public function putFriend($contact, $group, $user)
     {
         $model = ModelFactory::getFriendModel();
@@ -862,8 +886,10 @@ class ContactService implements IContactService {
             throw new OperationFailureException($e);
         }
     }
-
-
     
+    public function leaveGroup($userId, $groupId, $remark = "")
+    {
+        
+    }
 
 }

@@ -26,7 +26,7 @@ class ContactController extends Controller
     protected $service = null;
 
     protected $user = null;
-
+    
     public function __construct(Request $request)
     {
         $this->user = cmf_get_current_user();
@@ -214,6 +214,18 @@ class ContactController extends Controller
             $this->success($e->getMessage(), '/' , null, 0);
         }
         $this->error('已提交申请，群聊将在3天后解散', '/' , null, 0);
+    }
+    
+    /**
+     * 检查是否已经到3天 到了就删除群聊
+     */
+    public function deleteGroups() {
+        try {
+            SingletonServiceFactory::getContactService()->deleteGroups();
+        } catch (\Exception $e) {
+            $this->success($e->getMessage(), '/' , null, 0);
+        }
+        $this->error('群聊已解散', '/' , null, 0);
     }
     
     /**

@@ -176,6 +176,11 @@ interface IContactService {
     public function deleteGroup($gid, $user) ;
     
     /**
+     * 检查是否已经到3天 到了就删除群聊
+     */
+    public function deleteGroups() ;
+    
+    /**
      * 将好友更换分组
      * @param int $contact 好友id
      * @param int $group 分组id
