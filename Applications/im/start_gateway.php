@@ -21,9 +21,20 @@ use \Workerman\Autoloader;
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 // gateway 进程，这里使用Text协议，可以用telnet测试
+$context = [
+    'ssl'=> [
+        'local_cert'=>__DIR__."/2285556_im.5dx.ink.crt",
+        'local_pk'=>__DIR__."/2285556_im.5dx.ink.key",
+        'verify_peer'=>false,
+        //'allow_self_signed'=>true
+    ]
+];
+// $gateway = new Gateway("websocket://0.0.0.0:8080", $context);
+// $gateway->transport = "ssl";
 $gateway = new Gateway("websocket://0.0.0.0:8080");
+
 // gateway名称，status方便查看
-$gateway->name = 'IM';
+$gateway->name = 'IM_Gateway';
 // gateway进程数
 $gateway->count = 2;
 // 本机ip，分布式部署时使用内网ip
@@ -33,8 +44,8 @@ $gateway->lanIp = '127.0.0.1';
 // 则一般会使用4000 4001 4002 4003 4个端口作为内部通讯端口 
 $gateway->startPort = 2900;
 // 服务注册地址
-// $gateway->registerAddress = '127.0.0.1:1238';
-$gateway->registerAddress = '0.0.0.0:1238';
+$gateway->registerAddress = '127.0.0.1:1238';
+// $gateway->registerAddress = '0.0.0.0:1238';
 
 // 心跳设置
 $gateway->pingNotResponseLimit = 3;

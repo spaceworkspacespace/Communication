@@ -95,4 +95,31 @@ interface IChatService {
      * @param "video" | "voice" $callType
      */
     public function requestCallWithGroup($userId, $groupId, $callType);
+    
+    /**
+     *进行应答
+     *@param string $sign
+     *@param boolean $replay
+     *@param boolean $unread
+     *@return bool
+     */
+    public function requestCallReply($userId,$sign,$replay,$unread);
+    
+    /**
+     *用户交换描述
+     *@param mixed $userId
+     *@param string $sign
+     *@param string $description
+     *@return bool
+     */
+    public function requestCallUserExchange($userId,$sign,$description);
+    
+    /**
+     *群聊用户交换描述
+     *@param mixed $userId
+     *@param mixed $GroupId
+     *@param array $usersData
+     *@return bool
+     */
+    public function requestCallGroupExchange($userId,$GroupId,$usersData);
 }

@@ -463,37 +463,122 @@ class ChatService implements IChatService {
         im_log("debug", "readMessage $type end.");
     }
     
+//     public function requestCallWithFriend($userId, $userId2, $callType)
+//     {
+//         $userService = SingletonServiceFactory::getUserService();
+//         // 判断是否在线
+//         if (!$userService->isOnline($userId2)
+//             || !$userService->isOnline($userId)) {
+//                 // 发送通话失败的信息
+//                 $this->sendToUser(0, $userId, implode([
+//                     "json", [
+//                         "type"=>"call",
+//                         "data"=>[
+//                             "result"=>"offline",
+//                             "type"=>$callType,
+//                             "time"=>0
+//                         ]
+//                     ]
+//                 ]));
+//                 $this->sendToUser(0, $userId2, implode([
+//                     "json", [
+//                         "type"=>"call",
+//                         "data"=>[
+//                             "result"=>"missed",
+//                             "type"=>$callType,
+//                             "time"=>0
+//                         ]
+//                     ]
+//                 ]));
+//                 return;
+//             }
+//         $users = model("user")
+//             ->getUserById($userId, $userId2);
+//         if ($users[0]["id"] !== $userId2) {
+//             $user = $users[0];
+//             $user2 = $users[1];
+//         } else {
+//             $user2 = $user[0];
+//             $user = $user[1];
+//         }
+//         // 推送请求通话的消息
+//         $gatewayService = SingletonServiceFactory::getGatewayService();
+//         $gatewayService::sendToUser($userId2, [
+//             "sign"=>implode("-", [$userId, $userId2, time()]),
+//             "ctype"=>$callType,
+//             "userid"=>$user["id"],
+//             "username"=>$user["username"],
+//             "useravatar"=>$user["avatar"],
+//             "ruserid"=>$user2["id"],
+//             "rusername"=>$user2["username"],
+//             "ruseravatar"=>$user2["avatar"]
+//         ], $gatewayService::COMMUNICATION_ASK_TYPE);
+//     }
+
     public function requestCallWithFriend($userId, $userId2, $callType)
     {
+        $redis = RedisModel::getRedis();
+        $userOnline1 = $redis->rawCommand("HKEYS","im_call_calling_user_".$userId."_hash");
+        if(!empty($userOnline1)){
+            throw  new OperationFailureException("你有通话正在进行哦！");
+        }
         $userService = SingletonServiceFactory::getUserService();
-        // 判断是否在线
-        if (!$userService->isOnline($userId2)
-            || !$userService->isOnline($userId)) {
-                // 发送通话失败的信息
-                $this->sendToUser(0, $userId, implode([
-                    "json", [
+        if (!$userService->isOnline($userId2)||!$userService->isOnline($userId)) {
+            //             echo $userId."----------".$userId2;
+            //             exit();
+            // 发送通话失败的信息
+            //             $this->sendToUser($userId2, $userId,implode([
+            //                 "json",json_encode([
+            //                     "type"=>"call",
+            //                     "data"=>[
+            //                         "result"=>"offline",//对方不在线
+            //                         "type"=>$callType,
+            //                         "time"=>0
+            //                     ]
+            //                 ])
+            //             ]));
+            $this->sendToUser($userId, $userId2,implode([
+                "json",json_encode([
+                    "type"=>"call",
+                    "data"=>[
+                        "send_result" => "offline",
+                        "receiver_result"=>"missed",//未接听
+                        "type"=>$callType,
+                        "time"=>0
+                    ]
+                ])
+            ]));
+            return false;
+        }
+        $userOnline2 = $redis->rawCommand("HKEYS","im_call_calling_user_".$userId2."_hash");
+        if(!empty($userOnline2)){
+            if(!in_array($userId,$userOnline1)){
+                //                 $this->sendToUser($userId2,$userId,implode([
+                //                     "json",json_encode([
+                //                         "type"=>"call",
+                //                         "data"=>[
+                //                             "result"=>"missed",//对方正在通话中
+                //                             "type"=>$callType,
+                //                             "time"=>0
+                //                         ]
+                //                     ])
+                //                 ]));
+                $this->sendToUser($userId, $userId2,implode([
+                    "json",json_encode([
                         "type"=>"call",
                         "data"=>[
-                            "result"=>"offline",
+                            "send_result" => "incall",//对方正在打电话
+                            "receiver_result"=>"missed",//未接听
                             "type"=>$callType,
                             "time"=>0
                         ]
-                    ]
+                    ])
                 ]));
-                $this->sendToUser(0, $userId2, implode([
-                    "json", [
-                        "type"=>"call",
-                        "data"=>[
-                            "result"=>"missed",
-                            "type"=>$callType,
-                            "time"=>0
-                        ]
-                    ]
-                ]));
-                return;
+                return false;
             }
-        $users = model("user")
-            ->getUserById($userId, $userId2);
+            throw  new OperationFailureException("你和对方正在进行通话！");
+        }
+        $users = model("user")->getUserById($userId, $userId2);
         if ($users[0]["id"] !== $userId2) {
             $user = $users[0];
             $user2 = $users[1];
@@ -501,10 +586,9 @@ class ChatService implements IChatService {
             $user2 = $user[0];
             $user = $user[1];
         }
-        // 推送请求通话的消息
         $gatewayService = SingletonServiceFactory::getGatewayService();
         $gatewayService::sendToUser($userId2, [
-            "sign"=>implode("-", [$userId, $userId2, time()]),
+            "sign"=> implode("-", [$userId, $userId2, time()]),
             "ctype"=>$callType,
             "userid"=>$user["id"],
             "username"=>$user["username"],
@@ -513,11 +597,208 @@ class ChatService implements IChatService {
             "rusername"=>$user2["username"],
             "ruseravatar"=>$user2["avatar"]
         ], $gatewayService::COMMUNICATION_ASK_TYPE);
+        return true;
     }
     
-    public function requestCallWithGroup($userId, $groupId, $callType)
-    {}
+    public function requestCallWithGroup($userId, $groupId, $callType){
+        $redis = RedisModel::getRedis();
+        $from = model("user")->getUserById($userId);
+        $to = model("groups")->getGroupExist($groupId,$userId);
+        if (count($from) == 0 || count($to) == 0) {
+            im_log("error", "尝试使用不存在的 id 发送音频. from user $userId to group $groupId: . to: ", $to, ", from: ", $from);
+            throw new OperationFailureException("用户或分组不存在.");
+        }
+        //         $userOnline = $redis->del("im_call_calling_user_".$userId."_hash");
+        //         $groups = $redis->del("im_call_calling_gruop_".$groupId."_hash");
+        //         exit();
+        $userOnline = $redis->rawCommand("HKEYS","im_call_calling_user_".$userId."_hash");
+        if(!empty($userOnline)){
+            throw  new OperationFailureException("你有通话正在进行哦！");
+        }
+        $gatewayService = SingletonServiceFactory::getGatewayService();
+        
+        $groups = $redis->rawCommand("HKEYS","im_call_calling_gruop_".$groupId."_hash");
+        if(!empty($groups)){//当前群正在群聊时
+            if(!in_array($userId, $groups)){
+                $redis->rawCommand("HSET","im_call_calling_gruop_".$groupId."_hash" ,$userId,time());
+                foreach($groups as $key){
+                    $redis->rawCommand("HSET","im_call_calling_user_".$userId."_hash" ,$key,json_encode([
+                        "createTime" => time(),
+                        "ctype" => $callType
+                    ]));
+                    $gatewayService->sendToUser($key,[
+                        "type"=> "group",
+                        "list"=> model("group")->getMemberList($groupId,true)->toArray(),
+                    ],$gatewayService::COMMUNICATION_MEMBER_TYPE);
+                }
+                return true;
+            }
+            throw  new OperationFailureException("你有通话正在进行哦！");
+        }
+        $callListName = config("im.cache_calling_communicating_list_key");
+        $redis->rawCommand("LPUSH",$callListName,implode([$userId,"-",time()]));
+        $sign = implode("-", [$groupId, $userId, time()]);
+        $redis->rawCommand("HSET","im_call_calling_gruop_".$groupId."_hash","group",json_encode([//保存群聊sign
+            "sign" => $sign,
+            "groupid" => $to["id"],
+            "ctype"=>$callType,
+        ]));
+        $redis->rawCommand("HSET","im_call_calling_gruop_".$groupId."_hash",$userId,time());
+        $redis->rawCommand("HSET","im_call_calling_user_".$userId."_hash","group",json_encode([//证明他已经在通话中了
+            "sign" => $sign,
+            "groupid" => $to["id"],
+            "ctype"=>$callType,
+        ]));
+        $gatewayService->sendToGroup($groupId,[
+            "sign"=>$sign,
+            "ctype"=>$callType,
+            "groupid"=>$to["id"],
+            "groupname"=>$to["groupname"],
+            "groupavatar"=>$to["avatar"],
+            "userid"=>$from[0]["id"],
+            "username"=>$from[0]["username"],
+            "useravatar"=>$from[0]["avatar"]
+        ],$gatewayService::COMMUNICATION_ASK_TYPE);
+        
+        $this->sendToGroup($userId, $groupId,implode([
+            "json",json_encode([
+                "type"=>"call",
+                "data"=>[
+                    "result"=>"jionGroup",//视频邀请
+                    "type"=>$callType,
+                    "time"=>0
+                ]
+            ])
+        ]));
+        return true;
+    }
     
+    public function requestCallReply($userId,$sign,$replay,$unread){
+        //unread重新推送先不做
+        $redis = RedisModel::getRedis();
+        $hashName = config("im.cache_chat_last_send_time_key");
+        $data = $redis->rawCommand("HGET",$hashName ,$sign);
+        echo $sign;
+        var_dump($data);
+        exit();
+        if(!$data){
+            im_log("error", "$hashName 中的数据只应由 MVC 框架删除.");
+            return false;
+        }
+        $cdata = json_encode($data,true);
+        $user1 = $cdata["rawdata"]["payload"]["data"];
+        $redis->rawCommand("HDEL",$hashName ,$sign);
+        if(isset($user1["ruserid"])){
+            return $this->requestCallUserReply($replay, $user1);
+        }
+        if(isset($user1["groupid"])){
+            return $this->requestCallGroupReply($userId,$replay, $user1);
+        }
+    }
+    
+    public function requestCallUserExchange($userId,$sign,$description){//未写重发
+        $redis = RedisModel::getRedis();
+        $hashName = config("im.cache_chat_last_send_time_key");
+        $data = $redis->rawCommand("HGET", $hashName, $sign);
+        if (!$data) {
+            im_log("error", "该通话已中断");
+            return false;
+        }
+        $data = json_decode($data, true);
+        $redis->rawCommand("HDEL", $hashName, $sign);
+        $callHashName = config("im.cache_calling_communication_info_hash_key");
+        $cdata = $redis->rawCommand("HGET",$callHashName ,$data["rawdata"]["payload"]["data"]["sign"]);
+        $cdata = json_decode($cdata,true);
+        $redis->rawCommand("HSET","im_call_calling_user_".$cdata["userid"]."_hash",$cdata["ruserid"],json_encode([
+            "sign" => $cdata["sign"],
+            "description" => $description,//请求中
+            "createTime" => time(),
+            "ctype" => $cdata["ctype"]
+        ])
+            );
+        //		$redis->rawCommand("HSET","im_call_calling_user_".$cdata["ruserid"]."_hash",$cdata["userid"],json_encode([
+        //                "sign" => $cdata["sign"],
+        //                "description" => $description,
+        //                "createTime" => time(),
+        //                "ctype" => $cdata["ctype"]
+        //            ])
+        //        );
+        $gatewayService = SingletonServiceFactory::getGatewayService();
+        $gatewayService::sendToUser($cdata["ruserid"],[
+            "sign" => $cdata["sign"],
+            "description" => $description
+        ],$gatewayService::COMMUNICATION-COMMAND);
+    }
+    
+    public function requestCallGroupExchange($userId, $GroupId, $usersData){
+        $redis = RedisModel::getRedis();
+        $ruser = $redis->rawCommand("HGET","im_call_calling_user_".$usersData["userid"]."_hash",$userId);
+        $user = $redis->rawCommand("HGET","im_call_calling_user_".$userId."_hash",$usersData["userid"]);
+        if(empty($user) && empty($ruser)){
+            $callhashName = config("im.cache_calling_communication_info_hash_key");
+            $sign = $redis->rawCommand("HGET","im_call_calling_gruop_".$GroupId."_hash","group");
+            $sign = json_decode($sign,true);
+            $call = $redis->rawCommand("HGET", $callhashName, $sign["sign"]);
+            $group = $redis->rawCommand("HGET","im_call_calling_gruop_".$GroupId."_hash",$userId);
+            if($group && $sign && $call ){
+                $redis->rawCommand("HSET", $callhashName, $user[$usersData["userid"]]["sign"], $call);
+                $redis->rawCommand("HSET","im_call_calling_user_".$userId."_hash" , $usersData["userid"], json_encode([
+                    "sign" => "",
+                    "description" => $usersData["description"],
+                    "createTime" => time,
+                    "ctype" => ""
+                ]));
+                
+                $redis->rawCommand("HSET","im_call_calling_user_".$usersData["userid"]."_hash" ,$userId , json_encode([
+                    "sign" => "",
+                    "description" => $usersData["description"],
+                    "createTime" => time,
+                    "ctype" => ""
+                ]));
+                $users = model("user")->getUserById($userId, $usersData["userid"]);
+                if ($users[0]["id"] == $userId) {
+                    $user1 = $users[0];
+                    $user2 = $users[1];
+                } else {
+                    $user2 = $user[0];
+                    $user1 = $user[1];
+                }
+                $gatewayService = SingletonServiceFactory::getGatewayService();
+                $gatewayService::sendToUser($user1["id"],[
+                    "sign"=> "", // 通信的标识
+                    "ctype"=> "", // 通信的类型
+                    "userid"=> $user1["id"], // 请求者的 id
+                    "username" => $user1["user_login"], // 请求者的名称
+                    "useravatar" => $user1["avatar"], // 请求者的名称
+                    "ruserid" => $user2["id"], // 接收者的 id,
+                    "rusername" => $user2["user_login"],
+                    "ruseravatar" => $user2["avatar"],
+                ],$gatewayService::COMMUNICATION_EXCHANGE_TYPE);
+                $gatewayService::sendToUser($call[$GroupId]["userid"],[
+                    "sign" => "",
+                    "description" => $call[$GroupId]["description"]
+                ],$gatewayService::COMMUNICATION_COMMAND_TYPE);
+                $gatewayService::sendToUser($userId,[
+                    "sign" => "",
+                    "description" => $call[$GroupId]["description"]
+                ],$gatewayService::COMMUNICATION_COMMAND_TYPE);
+                $gatewayService::sendToUser($user2["id"],[
+                    "sign" => "", // 通信的标识
+                    "ctype" => "", // 通信的类型
+                    "userid" => $user2["id"], // 请求者的 id
+                    "username" => $user2["user_login"], // 请求者的名称
+                    "useravatar" => $user2["avatar"], // 请求者的名称
+                    "ruserid" => $user1["id"], // 接收者的 id,
+                    "rusername" => $user1["user_login"],
+                    "ruseravatar" => $user1["avatar"],
+                ],$gatewayService::COMMUNICATION_EXCHANGE_TYPE);
+                
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function sendToGroup($fromId, $toId, $content, $ip=null)
     {
         $query = ModelFactory::getQuery();
@@ -595,7 +876,7 @@ class ChatService implements IChatService {
             throw new OperationFailureException("消息发送失败, 请稍后重试~");
         }
     }
-    
+
     public function sendToUser($fromId, $toId, $content, $ip=null)
     {
         $query = ModelFactory::getQuery();
@@ -667,11 +948,12 @@ class ChatService implements IChatService {
                 "tavatar"=>$to["avatar"],
                 "tusername"=>$to["username"]
             ];
+            im_log("debug", "发送消息");
             // 推送到用户
-            if (Gateway::isUidOnline($toId)) {
-                GatewayServiceImpl::msgToUid($toId, [$reData]);
-                GatewayServiceImpl::msgToUid($fromId, [$reData]);
-            }
+//             if (Gateway::isUidOnline($toId)) {
+                SingletonServiceFactory::getGatewayService()->msgToUid($toId, [$reData]);
+                SingletonServiceFactory::getGatewayService()->msgToUid($fromId, [$reData]);
+//             }
             return $reData;
         } catch(OperationFailureException $e) {
             $query->rollback();

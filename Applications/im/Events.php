@@ -22,7 +22,7 @@ use GatewayWorker\Lib\Gateway;
 
 $onlineListName = "im_chat_online_user_set";
 $cache = new \Redis();
-$cache->connect("127.0.0.1");
+$cache->connect(getenv("REDIS_HOST"));
 
 class MessageType
 {
@@ -126,7 +126,9 @@ class MessageHandler
     public static function tryOffline($client_id)
     {
         $uid = Gateway::getUidByClientId($client_id);
-        if (! Gateway::isUidOnline($uid)) { // 从在线用户列表中移除
+        if ($uid != null 
+            && trim($uid) !== '' 
+            && ! Gateway::isUidOnline($uid)) { // 从在线用户列表中移除
             global $onlineListName, $cache;
             $cache->rawCommand("SREM", $onlineListName, $uid);
         }

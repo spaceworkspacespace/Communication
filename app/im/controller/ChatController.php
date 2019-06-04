@@ -5,6 +5,7 @@ use app\im\exception\OperationFailureException;
 use think\Controller;
 use app\im\service\IChatService;
 use app\im\service\SingletonServiceFactory;
+use think\Request;
 
 class ChatController extends Controller{
     protected $beforeActionList = [
@@ -116,13 +117,14 @@ class ChatController extends Controller{
         }
     }
     
-    public function postCall($stage=null, 
-        $id=null, $chatType=null, $type=null,
-        $sign=null, $unread=null, $replay=null,
-        $description=null, $call=null) {
+    public function postCall($stage=null,
+    $id=null, $chatType=null, $type=null,
+    $sign=null, $unread=null, $replay=null,
+    $description=null, $call=null) {
         $failure = false;
         $message = "";
         $data = [];
+        //         $bool = false;
         $chatService = SingletonServiceFactory::getChatService();
         try {
             // 请求通话
@@ -132,20 +134,94 @@ class ChatController extends Controller{
                 }
                 switch($chatType) {
                     case "group":
-                        $chatService->requestCallWithGroup($this->userId, $id, $type);
+                        $bool = $chatService->requestCallWithGroup($this->userId, $id, $type);
                         break;
                     case "friend":
-                        $chatService->requestCallWithFriend($this->userId, $id, $type);
+                        $bool = $chatService->requestCallWithFriend($this->userId, $id, $type);
                         break;
                     default:
-                        throw new OperationFailureException("聊天对象未确定.");
+                        throw new OperationFailureException("聊天对象未确定");
+                }
+            }else{
+                switch ($stage){
+                    case "replay"://请求应答
+                        $bool = $chatService->requestCallReply($this->userId,$sign, $replay, $unread);
+                        break;
+                    case "exchange"://交换描述
+                        if($call == null){
+                            $bool = $chatService->requestCallUserExchange($this->userId, $sign, $description);
+                        }else{
+                            $key = key($call);
+                            $bool = $chatService->requestCallGroupExchange($this->userId,$key, $call[$key]);
+                        }
+                        break;
+                    case "complete"://连接完成
+                        $bool = $chatService->requestCallReply($this->userId, $sign, $replay, $unread);
+                        break;
+                    default:
+                        throw new OperationFailureException("请求错误！");
+                        break;
                 }
             }
+            return $bool?$this->error("成功"):$this->success("失败1");
         } catch (OperationFailureException $e) {
             $message = $e->getMessage();
-            $failure = true;
+            echo $message;
         }
     }
+
+//     public function postCall($stage=null,
+//             $id=null, $chatType=null, $type=null,
+//             $sign=null, $unread=null, $replay=null,
+//             $description=null, $call=null) {
+//             $failure = false;
+//             $message = "";
+//             $data = [];
+//             $chatService = SingletonServiceFactory::getChatService();
+//             try {
+//                 switch($stage){
+//                     //请求通话
+//                     case null:
+//                         if (!is_string($chatType) || is_null($id) || !is_string($type)) {
+//                             throw new OperationFailureException("聊天对象未确定.");
+//                         }
+//                         switch($chatType) {
+//                             case "group":
+//                                 $chatService->requestCallWithGroup($this->userId, $id, $type);
+//                                 break;
+//                             case "friend":
+//                                 $chatService->requestCallWithFriend($this->userId, $id, $type);
+//                                 break;
+//                             default:
+//                                 throw new OperationFailureException("聊天对象未确定.");
+//                         }
+//                         break;
+//                     //请求应答
+//                     case "reply":
+//                         if(!is_null($unread) && !$unread){
+//                             throw new OperationFailureException("消息未发送成功，请稍后再试.");
+//                         }
+                        
+//                         if(is_null($replay)){
+//                             throw new OperationFailureException("网络请求出现错误.");
+//                         }
+                        
+//                         $chatService->requestResponse($replay);
+//                         break;
+//                     //交换描述
+//                     case "exchange":
+//                         break;
+//                     //连接完成
+//                     case "complete":
+//                         break;
+//                     default:
+//                         throw new OperationFailureException("出现了一个未知的错误.");
+//                 }
+//             } catch (OperationFailureException $e) {
+//                 $message = $e->getMessage();
+//                 $failure = true;
+//             }
+//         }
     
     /**
      * 发送聊天信息

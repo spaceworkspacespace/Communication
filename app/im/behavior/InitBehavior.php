@@ -24,7 +24,7 @@ class InitBehavior {
     }
     
     public static function actionBegin(&$params) {
-        Gateway::$registerAddress=config("gateway.remote");
+        Gateway::$registerAddress = config("gateway.remote");
     }
     
     public static function _forceAjax() {

@@ -64,7 +64,6 @@ class UserController extends Controller {
         ], 0);
     }
     
-    
     /**
      * 获取用户信息
      */

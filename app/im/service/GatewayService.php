@@ -88,6 +88,8 @@ class GatewayService implements IGatewayService
     
     public function msgToClient($clientId, $data): void
     {
+//         im_log("debug", "send to: ".$clientId);
+        
         $uid = Gateway::getUidByClientId($clientId);
         // 获取所有消息 id
         $cids = array_column($data, "cid");
@@ -165,7 +167,7 @@ class GatewayService implements IGatewayService
     {
         $clientIds = Gateway::getClientIdByUid($uid);
         foreach ($clientIds as $id) {
-            static::msgToClient($id, $data);
+            $this->msgToClient($id, $data);
         }
         /*
 
@@ -227,6 +229,8 @@ class GatewayService implements IGatewayService
     }
 
     public function sendToClient($clientId, $data, $type, $cids=[], $resend=3) {
+        im_log("debug", "send to: ".$clientId);
+        
         $uid = Gateway::getUidByClientId($clientId);
         $sign = base64_urlSafeEncode(implode([$clientId, lcg_value(), time()]));
         

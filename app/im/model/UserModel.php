@@ -3,8 +3,6 @@ namespace app\im\model;
 
 use think\Db;
 use think\Model;
-use function Qiniu\json_decode;
-use think\Db;
 
 class UserModel extends Model implements IUserModel {
     protected $type = [
