@@ -560,5 +560,22 @@ SQL;
         ->toArray();
     }
 
+    public function getMemberList($groupId,$include = false){
+        $list = $this->where("id",$groupId)->field("id,groupname,description,avatar,create_time createtime,admin_id admin")->find();
+        $groups = model("groups")->alias("g")->where("contact_id",$groupId)->join(["cmf_user"=>"u"],"g.user_id = u.id")->field("u.user_login username,u.id,u.avatar,u.signature sign,u.sex,g.is_admin isadmin")->select()->toArray();
+        $list["membercount"] = count($groups);
+        $list["admincount"] = model("groups")->where(["contact_id"=>$groupId,"is_admin"=>1])->count();
+        if($include && !empty($groups)){
+            $userService = SingletonServiceFactory::getUserService();
+            $arr = array(1=>"男",2=>"女");
+            foreach ($groups as $key => $val){
+                $groups[$key]["status"] = $userService->isOnline($val["id"])?"online":"offline";
+                $groups[$key]["isadmin"] = $val["isadmin"] == 1?true:false;
+                $groups[$key]["sex"] = array_key_exists($val["sex"], $arr)?$arr[$val["sex"]]:"保密";
+            }
+            $list["list"] = $groups;
+        }
+        return $list;
+    }
 
 }

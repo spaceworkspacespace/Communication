@@ -8,6 +8,10 @@ interface IGatewayService {
     public const UPDATE_TYPE = "UPDATE";
     public const ADD_TYPE = "ADD";
     public const COMMUNICATION_ASK_TYPE = "COMMUNICATION-ASK";
+    public const COMMUNICATION_EXCHANGE_TYPE = "COMMUNICATION-EXCHANGE";
+    public const COMMUNICATION_COMMAND_TYPE = "COMMUNICATION-COMMAND";
+    public const COMMUNICATION_ICE_TYPE = "COMMUNICATION-ICE";
+    public const COMMUNICATION_MEMBER_TYPE = "COMMUNICATION-MEMBER";
     public const TYPE_FRIEND_REMOVE = 16;
     public const TYPE_GROUP_REMOVE = 22;
     

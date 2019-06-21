@@ -351,4 +351,15 @@ SQL;
         
         return $affectedCount;
     }
+    
+    public function addInfo($userId1, $userId2, $content) {
+        Db::table('im_chat_user')
+        ->insert([
+            'sender_id'=>$userId1,
+            'send_date'=>time(),
+            'receiver_id'=>$userId2,
+            'content'=>$content,
+            'visible_receiver'=>0
+        ]);
+    }
 }

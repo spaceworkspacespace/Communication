@@ -2,7 +2,6 @@
 
 use think\Route;
 
-Route::controller("test", "test");
 // 联系人操作
 Route::group("im", function () {
     Route::controller("contact", "contact");
@@ -12,7 +11,6 @@ Route::group("im", function () {
     Route::controller("comm", "comm");
     Route::controller("test", "test");
     
-    
     Route::any('comment/:name',"comment/:name");
     Route::any('favorite/:name',"favorite/:name");
     Route::any('index/:name',"index/:name");
@@ -20,6 +18,7 @@ Route::group("im", function () {
     Route::any("register/:name", "register/:name");
     Route::any("profile/:name", "profile/:name");
 });
+
 
 
     // 加域名路由之前

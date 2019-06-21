@@ -40,7 +40,7 @@
 			mounted: function () {
 				try {
 					this.socket = new Gateway({
-						url: "ws://192.168.0.80:8080",
+						url: "wss://im.5dx.ink:8080",
 						interval: 60
 					});
 					this.socket.onmessage = this.onMessage.bind(this);

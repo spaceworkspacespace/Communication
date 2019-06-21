@@ -429,4 +429,14 @@ class UserModel extends Model implements IUserModel {
             cmf_update_current_user($userInfo);
             return 0;
         }
+        
+        public function login($username, $password)
+        {
+            $password = cmf_password($password);
+            return Db::table('cmf_user')
+            ->where('user_login', $username)
+            ->where('user_pass', $password)
+            ->column('user_nickname AS username,id,avatar,signature AS sign,sex');
+        }
+    
 }

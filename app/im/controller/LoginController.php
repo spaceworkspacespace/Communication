@@ -13,6 +13,7 @@ namespace app\im\controller;
 use think\Validate;
 use cmf\controller\HomeBaseController;
 use app\user\model\UserModel;
+use app\im\model\ModelFactory;
 
 class LoginController extends HomeBaseController
 {
@@ -66,7 +67,7 @@ class LoginController extends HomeBaseController
             }
 
             if (!cmf_captcha_check($data['captcha'])) {
-                $this->error(lang('CAPTCHA_NOT_RIGHT'));
+//                 $this->error(lang('CAPTCHA_NOT_RIGHT'));
             }
 
             $userModel         = new UserModel();
@@ -103,6 +104,27 @@ class LoginController extends HomeBaseController
         } else {
             $this->error("请求错误");
         }
+    }
+    
+    public function login($username, $password) {
+        $validate = new Validate([
+            'captcha'  => 'require',
+            'username' => 'require',
+            'password' => 'require|min:6|max:32',
+        ]);
+        $validate->message([
+            'username.require' => '用户名不能为空',
+            'password.require' => '密码不能为空',
+            'password.max'     => '密码不能超过32个字符',
+            'password.min'     => '密码不能小于6个字符',
+            'captcha.require'  => '验证码不能为空',
+        ]);
+        $model = ModelFactory::getUserModel();
+        $user = $model->login($username, $password);
+        if(empty($user)){
+            $this->error("账号或密码错误");
+        }
+        $this->error("登陆成功", "/", $user, 0);
     }
 
     /**

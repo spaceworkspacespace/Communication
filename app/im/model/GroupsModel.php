@@ -38,6 +38,18 @@ class GroupsModel extends IMModel {
     }
     
     /**
+     * 检测用户是否存在于此群组中
+     * @param int $groupId
+     * @param int $userId
+     * @return array
+     */
+    public function getGroupExist($groupId,$userId){
+        $result = $this->alias("gs")->where(["gs.user_id"=>$userId,"gs.contact_id"=>$groupId])->join(["im_group"=>"g"],"g.id = gs.contact_id")
+        ->field("g.id,g.groupname,g.description,g.avatar,g.create_time AS createtime,g.admin_id AS admin, g.admin_count AS admincount,g.member_count AS membercount")->find();
+        return $result;
+    }
+    
+    /**
      * 获取和联系人聊天的最后读取消息
      * @param mixed $userId
      * @param mixed $contactId

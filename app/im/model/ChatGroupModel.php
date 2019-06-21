@@ -201,4 +201,18 @@ SQL;
             ->query($sql);
         return $statement->fetchAll(\PDO::FETCH_ASSOC);
     }
+    
+    public function addGroupInfo($gid, $content)
+    {
+        Db::table('im_chat_group')
+        ->insert([
+            'group_id'=>$gid,
+            'issystem'=>0,
+            'sender_id'=>0,
+            'send_date'=>time(),
+            'content'=>$content,
+            'visible'=>1
+        ]);
+    }
+
 }

@@ -3,13 +3,14 @@ namespace app\im\controller;
 
 use app\im\exception\OperationFailureException;
 use think\Controller;
+use app\im\model\ModelFactory;
+use app\im\model\RedisModel;
 use app\im\service\IChatService;
 use app\im\service\SingletonServiceFactory;
-use think\Request;
 
 class ChatController extends Controller{
     protected $beforeActionList = [
-        "checkUserLogin"
+        "checkUserLogin"=>["except"=>"postofflineprocessing"]
     ];
     
     private $userId;
@@ -33,9 +34,6 @@ class ChatController extends Controller{
         }
     }
     
-//     public function getIndex() {
-//         return $this->fetch("/chatlog");
-//     }
     public function deleteMessage($cid, $type) {
         $msg = "";
         $data = null;
@@ -48,7 +46,6 @@ class ChatController extends Controller{
             $this->success($msg, "/", $data, 0);
         }
         $this->error($msg, "/", $data, 0);
-//         return $cid;
     }
     
     /**
@@ -120,11 +117,9 @@ class ChatController extends Controller{
     public function postCall($stage=null,
     $id=null, $chatType=null, $type=null,
     $sign=null, $unread=null, $replay=null,
-    $description=null, $call=null) {
-        $failure = false;
-        $message = "";
-        $data = [];
-        //         $bool = false;
+    $description=null, $call=null, $success=null,
+    $ice = null, $error = null, $errmsg = null) {
+        $bool = true;
         $chatService = SingletonServiceFactory::getChatService();
         try {
             // 请求通话
@@ -144,7 +139,7 @@ class ChatController extends Controller{
                 }
             }else{
                 switch ($stage){
-                    case "replay"://请求应答
+                    case "reply"://请求应答
                         $bool = $chatService->requestCallReply($this->userId,$sign, $replay, $unread);
                         break;
                     case "exchange"://交换描述
@@ -152,77 +147,40 @@ class ChatController extends Controller{
                             $bool = $chatService->requestCallUserExchange($this->userId, $sign, $description);
                         }else{
                             $key = key($call);
-                            $bool = $chatService->requestCallGroupExchange($this->userId,$key, $call[$key]);
+                            $bool = $chatService->requestCallGroupExchange($this->userId, $key, $call[$key]);
+                        }
+                        break;
+                    case "exchange-ice"://交换ice
+                        if($call == null){
+                            $bool = $chatService->requestCallUserExchangeIce($this->userId, $sign, $ice);
+                        }else{
+                            $key = key($call);
+                            $bool = $chatService->requestCallGroupExchangeIce($this->userId, $key, $call[$key]);
                         }
                         break;
                     case "complete"://连接完成
-                        $bool = $chatService->requestCallReply($this->userId, $sign, $replay, $unread);
+                        $bool = $chatService->requestCallComplete($sign, $success);
+                        break;
+                    case "finish"://挂断
+                        if($error){
+                            throw new OperationFailureException($errmsg);
+                        }
+                        $bool = $chatService->requestFinish($this->userId, $sign);
                         break;
                     default:
                         throw new OperationFailureException("请求错误！");
                         break;
                 }
             }
-            return $bool?$this->error("成功"):$this->success("失败1");
+        } catch (\Exception $e) {
+            $bool = false;
+            im_log("error", "错误：".$e->getMessage().",行号：".$e->getLine());
         } catch (OperationFailureException $e) {
-            $message = $e->getMessage();
-            echo $message;
+            throw new OperationFailureException($e);
         }
+        return $bool?$this->error("成功"):$this->success("失败");
     }
 
-//     public function postCall($stage=null,
-//             $id=null, $chatType=null, $type=null,
-//             $sign=null, $unread=null, $replay=null,
-//             $description=null, $call=null) {
-//             $failure = false;
-//             $message = "";
-//             $data = [];
-//             $chatService = SingletonServiceFactory::getChatService();
-//             try {
-//                 switch($stage){
-//                     //请求通话
-//                     case null:
-//                         if (!is_string($chatType) || is_null($id) || !is_string($type)) {
-//                             throw new OperationFailureException("聊天对象未确定.");
-//                         }
-//                         switch($chatType) {
-//                             case "group":
-//                                 $chatService->requestCallWithGroup($this->userId, $id, $type);
-//                                 break;
-//                             case "friend":
-//                                 $chatService->requestCallWithFriend($this->userId, $id, $type);
-//                                 break;
-//                             default:
-//                                 throw new OperationFailureException("聊天对象未确定.");
-//                         }
-//                         break;
-//                     //请求应答
-//                     case "reply":
-//                         if(!is_null($unread) && !$unread){
-//                             throw new OperationFailureException("消息未发送成功，请稍后再试.");
-//                         }
-                        
-//                         if(is_null($replay)){
-//                             throw new OperationFailureException("网络请求出现错误.");
-//                         }
-                        
-//                         $chatService->requestResponse($replay);
-//                         break;
-//                     //交换描述
-//                     case "exchange":
-//                         break;
-//                     //连接完成
-//                     case "complete":
-//                         break;
-//                     default:
-//                         throw new OperationFailureException("出现了一个未知的错误.");
-//                 }
-//             } catch (OperationFailureException $e) {
-//                 $message = $e->getMessage();
-//                 $failure = true;
-//             }
-//         }
-    
     /**
      * 发送聊天信息
      * @param  mixed $id 发送者 id
@@ -231,7 +189,6 @@ class ChatController extends Controller{
      */
     public function postMessage($id, $type, $content){
         $msg = "";
-        // im_log("debug", "新的消息 $id $type $content");
         $reData=null;
         $service = SingletonServiceFactory::getChatService();
         try {
@@ -250,7 +207,52 @@ class ChatController extends Controller{
         $this->error($msg, "/", $reData,0);
     }
     
-   
+    //掉线处理 结束通话
+    public function postOfflineProcessing($client_id) {
+        $i = 0;
+        $bool = false;
+        $redis = RedisModel::getRedis();
+        $model = ModelFactory::getChatFriendModel();
+        $service = SingletonServiceFactory::getChatService();
+        $isOnline = config("im.cache_chat_online_user_key");
+        $userCall = json_decode($redis->rawCommand("HGETALL","im_call_calling_user_".$client_id."_hash"), true);
+        if(empty($userCall)){
+            return $this->error("成功");
+        }
+        $userIds = explode("-", $userCall['sign']);
+        if($userIds[0] == $client_id){
+            $client_id2 = $userIds[1];
+        }else{
+            $client_id2 = $userIds[0];
+        }
+        $data = $redis->rawCommand("SMEMBERS", $isOnline);
+        foreach ($data as $value) {
+            if($value === $client_id){
+                $redis->rawCommand("SREM", $isOnline, $i);
+                //结束通话
+                if(count($userIds) == 3){
+                    $bool = $service->requestFinish($client_id, $userIds[2]);
+                }else{
+                    $bool = $service->requestFinish($client_id, $userIds[1]);
+                }
+                $model->addInfo($client_id, $client_id2, "通话异常中断");
+                $model->addInfo($client_id2, $client_id, "通话异常中断");
+                $service->sendToUser($client_id, $client_id2, implode([
+                    "json",json_encode([
+                        "type"=>"call",
+                        "data"=>[
+                            "receiver_result"=>"success",//童话异常中断
+                            "type"=>$userCall['ctype'],
+                            "time"=>time()-$userCall['createTime']
+                        ]
+                    ])
+                ]));
+                break;
+            }
+            $i++;
+        }
+        return $bool?$this->error("成功"):$this->success("失败");
+    }
     
     /**
      * 客户端的消息反馈, 说明已经收到信息
@@ -260,94 +262,6 @@ class ChatController extends Controller{
         SingletonServiceFactory::getChatService()->messageFeedback(cmf_get_current_user_id(), $sign);
         return $sign;
     }
-    
-//     /**
-//      * 查询聊天记录
-//      * @param string $type 聊天记录类型
-//      * @param int $id 用户id 群聊id
-//      * @param boolean $separately
-//      * @param number $no 页码 
-//      * @param number $count 页数
-//      * @return array
-//      */
-//     private function getMessages($type, $id, $separately, $no, $count) {
-//         $data = null;
-//         //判断类型
-//         if($type == 'friend'){
-//             //判断id是否存在 存在则指定查询好友 不存在则查询和所有好友的聊天记录
-//             if($id){
-//                 $data = Db::table('im_chat_user a,cmf_user b,im_friends c')
-//                 ->where('a.sender_id = b.id')
-//                 ->where('a.sender_id = c.user_id')
-//                 ->where('((a.receiver_id = '.$this->userId.' AND a.sender_id = '.$id.') OR (a.receiver_id = '.$id.' AND a.sender_id = '.$this->userId.'))')
-//                 ->order('a.send_date', 'desc')
-//                 ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
-//                 ->page($no, $count)
-//                 ->select();
-//             }else{
-//                 //如果为true查询所有好友各50条 如果为false查询和所有好友最近的50条
-//                 if($separately){
-//                     //查询出所有的好友id
-//                     $contactids = Db::table('im_friends')
-//                     ->where(['user_id' => $this->user['id']])
-//                     ->column('contact_id');
-                    
-//                     $data = null;
-//                     foreach ($contactids as $value) {
-//                         $res = Db::table('im_chat_user a,cmf_user b,im_friends c')
-//                         ->where('a.sender_id = b.id')
-//                         ->where('a.sender_id = c.user_id')
-//                         ->where('((a.receiver_id = '.$this->user['id'].' AND a.sender_id = '.$value.') OR (a.receiver_id = '.$value.' AND a.sender_id = '.$this->user['id'].'))')
-//                         ->order('a.send_date', 'desc')
-//                         ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id,c.contact_alias AS username,b.avatar')
-//                         ->page($no, $count)
-//                         ->select();
-                        
-//                         //合并数组
-//                         $data = array_merge($data, $res);
-//                     }
-//                 }
-//             }
-//         }else if($type == 'group'){
-//             if($id){
-//                 $data = Db::table('im_chat_group a')
-//                 ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
-//                 ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
-//                 ->join(['im_group' => 'd'],'d.id = a.group_id','LEFT')
-//                 ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
-//                 ->where(['a.group_id' => $id])
-//                 ->order('a.send_date', 'desc')
-//                 ->page($no, $count)
-//                 ->select();
-//             }else{
-//                 if($separately){
-//                     //查询出所有的群组id
-//                     $contactids = Db::table('im_groups')
-//                     ->where(['user_id' => $this->user['id']])
-//                     ->column('contact_id');
-                    
-//                     $data = null;
-//                     foreach ($contactids as $value) {
-//                         $res = $data = Db::table('im_chat_group a')
-//                         ->join(['cmf_user' => 'b'],'b.id = a.sender_id','LEFT')
-//                         ->join(['im_groups' => 'c'],'c.contact_id = a.group_id AND b.id = c.user_id','LEFT')
-//                         ->join(['im_group' => 'd'],'a.group_id = d.id','LEFT')
-//                         ->field('a.id AS cid,a.send_date AS `date`,a.content,b.id AS uid,c.user_alias AS username,d.id AS gid,d.groupname,d.avatar AS gavatar')
-//                         ->where(['a.group_id' => $value])
-//                         ->order('a.send_date', 'desc')
-//                         ->page($no, $count)
-//                         ->select();
-                        
-//                         //合并数组
-//                         $data = array_merge($data, $res);
-//                     }
-//                 }
-//             }
-//         }
-//         return $data;
-//     }
-    
-
     
     /*
     public function sendMessage($id, $type, $content){

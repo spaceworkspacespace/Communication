@@ -33,7 +33,7 @@ interface IChatService {
      * @param mixed $cid
      * @param mixed $type
      */
-    public function hiddenMessage($userId, $cid, $type); 
+    public function hiddenMessage($userId, $cid, $type);
     
     /**
      * 更新用户收到的消息
@@ -85,6 +85,7 @@ interface IChatService {
      * @param mixed $userId
      * @param mixed $userId2
      * @param "video" | "voice" $callType
+     * @return bool
      */
     public function requestCallWithFriend($userId, $userId2, $callType);
     
@@ -93,6 +94,7 @@ interface IChatService {
      * @param mixed $userId
      * @param mixed $groupId
      * @param "video" | "voice" $callType
+     * @return bool
      */
     public function requestCallWithGroup($userId, $groupId, $callType);
     
@@ -104,6 +106,22 @@ interface IChatService {
      *@return bool
      */
     public function requestCallReply($userId,$sign,$replay,$unread);
+    
+    /**
+     *用户接听
+     *@param boolean $replay
+     *@param array $userdata
+     *@return bool
+     */
+    public function requestCallGroupReply($userId,$replay,$userdata,$sign);
+    
+    /**
+     *加入群聊
+     *@param boolean $replay
+     *@param array $unread
+     *@return bool
+     */
+    public function requestCallUserReply($userId, $replay, $userdata, $sign);
     
     /**
      *用户交换描述
@@ -122,4 +140,57 @@ interface IChatService {
      *@return bool
      */
     public function requestCallGroupExchange($userId,$GroupId,$usersData);
+    
+    /**
+     * 用户交换ice
+     */
+    public function requestCallUserExchangeIce($userId, $sign, $ice) ;
+    
+    /**
+     * 群聊交换ice
+     * @param int $userId
+     * @param int $sign
+     * @param string $ice
+     * @param array $userData
+     */    
+    public function requestCallGroupExchangeIce($userId, $groupId, $call) ;
+    
+    
+    /**
+     *挂断通话
+     *@param mixed $userId
+     *@param string $sign
+     *@param boolean $success
+     *@return bool
+     */
+    public function requestCallComplete($sign,$success);
+    
+    /**
+     * 用户退出聊天
+     *@param array $userdata
+     *@return bool
+     */
+    public function requestCallUserComplete($userdata);
+    
+    /**
+     * 退出群聊
+     *@param array $userdata
+     *@return bool
+     */
+    public function requestCallGroupComplete($userId, $sign, $userdata);
+    
+    /**
+     * 挂断
+     * @param int $userId
+     * @param string $sign
+     */
+    public function requestFinish($userId, $sign) ;
+    
+    /**
+     * 通话结束
+     * @param int $client_id1
+     * @param int $client_id2
+     */
+    public function callOver($client_id1 = null, $client_id2 = null, $groupId = null, $sign = null) ;
+    
 }

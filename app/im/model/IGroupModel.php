@@ -143,4 +143,11 @@ interface IGroupModel {
      * 查询已经提交解散的群聊信息
      */
     public function queryDeleteGroup() ;
+    
+    /**
+     *  点对点通信-成员变动
+     * @param mixed $groupId
+     * @param boolean $include
+     */
+    public function getMemberList($groupId,$include = false);
 }

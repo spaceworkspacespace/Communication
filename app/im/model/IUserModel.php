@@ -31,4 +31,11 @@ interface IUserModel {
      * @param int $id 联系人id
      */
     public function getFriendById($id) ;
+   
+    /**
+     * 登陆验证
+     * @param string $username
+     * @param string $password
+     */
+    public function login($username, $password) ;
 }
