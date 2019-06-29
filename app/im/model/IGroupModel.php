@@ -2,6 +2,12 @@
 namespace app\im\model;
 
 interface IGroupModel {
+    /**
+     * 判断给出的群聊 id 是否全部有效
+     * @param array ...$groupIds
+     * @return bool
+     */
+    public function existAll(...$groupIds): bool;
     
     /**
      * 创建一个群聊
@@ -53,6 +59,13 @@ interface IGroupModel {
      * @return mixed 好友关系信息
      */
     public function getOriginGroupByUser($userId, $groupId, $fields="*") ;
+    
+    /**
+     *  点对点通信-成员变动
+     * @param mixed $groupId
+     * @param boolean $include
+     */
+    public function getMemberList($groupId,$include = false);
     
     /**
      * 判断用户是否在群聊中
@@ -144,10 +157,5 @@ interface IGroupModel {
      */
     public function queryDeleteGroup() ;
     
-    /**
-     *  点对点通信-成员变动
-     * @param mixed $groupId
-     * @param boolean $include
-     */
-    public function getMemberList($groupId,$include = false);
+    
 }

@@ -108,56 +108,13 @@ interface IChatService {
     public function requestCallReply($userId,$sign,$replay,$unread);
     
     /**
-     *用户接听
-     *@param boolean $replay
-     *@param array $userdata
-     *@return bool
+     * 客户端之间交换 ice 和 desc 的步骤, 要做的事情一样, 就写一起了.
+     * @param mixed $args { sign?: string, userId: number, desc?: string, ice?: string, call?: array }
      */
-    public function requestCallGroupReply($userId,$replay,$userdata,$sign);
+    public function requestCallExchange($args);
     
     /**
-     *加入群聊
-     *@param boolean $replay
-     *@param array $unread
-     *@return bool
-     */
-    public function requestCallUserReply($userId, $replay, $userdata, $sign);
-    
-    /**
-     *用户交换描述
-     *@param mixed $userId
-     *@param string $sign
-     *@param string $description
-     *@return bool
-     */
-    public function requestCallUserExchange($userId,$sign,$description);
-    
-    /**
-     *群聊用户交换描述
-     *@param mixed $userId
-     *@param mixed $GroupId
-     *@param array $usersData
-     *@return bool
-     */
-    public function requestCallGroupExchange($userId,$GroupId,$usersData);
-    
-    /**
-     * 用户交换ice
-     */
-    public function requestCallUserExchangeIce($userId, $sign, $ice) ;
-    
-    /**
-     * 群聊交换ice
-     * @param int $userId
-     * @param int $sign
-     * @param string $ice
-     * @param array $userData
-     */    
-    public function requestCallGroupExchangeIce($userId, $groupId, $call) ;
-    
-    
-    /**
-     *挂断通话
+     * 连接完成
      *@param mixed $userId
      *@param string $sign
      *@param boolean $success
@@ -165,32 +122,12 @@ interface IChatService {
      */
     public function requestCallComplete($sign,$success);
     
-    /**
-     * 用户退出聊天
-     *@param array $userdata
-     *@return bool
-     */
-    public function requestCallUserComplete($userdata);
     
     /**
-     * 退出群聊
-     *@param array $userdata
-     *@return bool
-     */
-    public function requestCallGroupComplete($userId, $sign, $userdata);
-    
-    /**
-     * 挂断
+     * 挂断，通话结束
      * @param int $userId
      * @param string $sign
      */
-    public function requestFinish($userId, $sign) ;
-    
-    /**
-     * 通话结束
-     * @param int $client_id1
-     * @param int $client_id2
-     */
-    public function callOver($client_id1 = null, $client_id2 = null, $groupId = null, $sign = null) ;
+    public function requestCallFinish($userId, $sign, $error=false) ;
     
 }

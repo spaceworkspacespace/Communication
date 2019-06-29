@@ -44,8 +44,11 @@ class GroupsModel extends IMModel {
      * @return array
      */
     public function getGroupExist($groupId,$userId){
-        $result = $this->alias("gs")->where(["gs.user_id"=>$userId,"gs.contact_id"=>$groupId])->join(["im_group"=>"g"],"g.id = gs.contact_id")
-        ->field("g.id,g.groupname,g.description,g.avatar,g.create_time AS createtime,g.admin_id AS admin, g.admin_count AS admincount,g.member_count AS membercount")->find();
+        $result = $this->alias("gs")
+            ->where(["gs.user_id"=>$userId,"gs.contact_id"=>$groupId])
+            ->join(["im_group"=>"g"],"g.id = gs.contact_id")
+            ->field("g.id,g.groupname,g.description,g.avatar,g.create_time AS createtime,g.admin_id AS admin, g.admin_count AS admincount,g.member_count AS membercount")
+            ->find();
         return $result;
     }
     

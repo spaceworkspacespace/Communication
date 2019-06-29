@@ -292,7 +292,9 @@ class ContactController extends Controller
     public function getFriend($keyword = null, $id = null, $no = 1, $count = 10) {
         try {
             $res = SingletonServiceFactory::getContactService()->getFriend($keyword, $id, $no, $count);
-            $res = $this->checkOnOrOff($res);
+            foreach($res as &$u) {
+                $u["status"] = SingletonServiceFactory::getUserService()->isOnline($u["id"]);
+            }
         } catch (\Exception $e) {
             im_log("error", $e);
             $this->success('查询失败', '/', $e->getMessage(), 0);
@@ -523,39 +525,5 @@ class ContactController extends Controller
             return true;
         }
         return false;
-    }
-    
-    /**
-     * 验证用户是否在线 并加入status字段
-     * @param array $data
-     */
-    public function checkOnOrOff($data) {
-        if (!is_array($data)) {
-            return null;
-        }
-        //从缓存中取用户id是否在线
-        $status = cache('im_chat_online_user_list');
-        
-        //如果缓存中存在用户id就改成在线
-        for ($i = 0; $i < count($data); $i++) {
-            for ($j = 0; $j < count($status); $j++) {
-                if($data[$i]['id'] == $status[$j]){
-                    $data[$i]['status'] = 'online';
-                    break;
-                }else{
-                    $data[$i]['status'] = 'offline';
-                    continue;
-                }
-                
-            }
-            if($data[$i]['sex'] == 0){
-                $data[$i]['sex'] = '保密';
-            }else if($data[$i]['sex'] == 1){
-                $data[$i]['sex'] = '男';
-            }else{
-                $data[$i]['sex'] = '女';
-            }
-        }
-        return $data;
     }
 }

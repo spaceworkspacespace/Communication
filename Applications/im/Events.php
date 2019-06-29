@@ -17,12 +17,8 @@
  * 如果发现业务卡死，可以将下面declare打开（去掉//注释），并执行php start.php reload
  * 然后观察一段时间workerman.log看是否有process_timeout异常
  */
-// declare(ticks=1);
 use GatewayWorker\Lib\Gateway;
-
-$onlineListName = "im_chat_online_user_set";
-$cache = new \Redis();
-$cache->connect(getenv("REDIS_HOST"));
+use app\im\Factory;
 
 class MessageType
 {
@@ -77,7 +73,7 @@ class Events
      * @param mixed $message
      *            具体消息
      */
-    public static function onMessage($client_id, $message)
+    public static function onMessage($client_id, $message = null)
     {
         // 向所有人发送
         // Gateway::sendToAll(implode([
@@ -91,6 +87,20 @@ class Events
         // MessageHandler::online($data["data"]["uid"]);
         // break;
         // }
+        $callingIdTimeHash = config("redis_keys.im_calling_idtime_hash_key");
+        $callingIdList = config("redis_keys.im_calling_id_list_key");
+        $cache = Factory::getRedis(config("redis.host"));
+        $callIdData = $cache->rawCommand("LRANGE", $callingIdList, 0, -1);
+        for ($i = 0; $i < count($callIdData); $i++) {
+            if($callingIdList[$i] === $client_id){
+                //移除该元素
+                $cache->rawCommand("LREM", $callingIdList, $client_id);
+                //从将元素移到列表的最右边
+                $cache->rawCommand("RPUSH", $callingIdList, $client_id);
+                $cache->rawCommand("HSET", $callingIdTimeHash, $client_id, time());
+                break;
+            }
+        }
     }
 
     /**
@@ -125,11 +135,12 @@ class MessageHandler
      */
     public static function tryOffline($client_id)
     {
+        $cache = Factory::getRedis(config("redis.host"));
+        $onlineListName = config("redis_keys.cache_chat_online_user_key");
         $uid = Gateway::getUidByClientId($client_id);
         if ($uid != null 
             && trim($uid) !== '' 
             && ! Gateway::isUidOnline($uid)) { // 从在线用户列表中移除
-            global $onlineListName, $cache;
             $cache->rawCommand("SREM", $onlineListName, $uid);
         }
     }

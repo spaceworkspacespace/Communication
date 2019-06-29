@@ -3,6 +3,8 @@ namespace app\im\behavior;
 
 use app\im\service\SecurityService;
 use GatewayClient\Gateway;
+use think\exception\HttpResponseException;
+use think\Response;
 
 class InitBehavior {
     public const forceAjaxUrl = [
@@ -21,6 +23,17 @@ class InitBehavior {
         // 测试设置跨域头
 //         var_dump($_GET["_origin"]);
 //         header("Access-Control-Allow-Origin:".$_GET["_origin"]);
+    }
+    
+    public static function moduleInit(&$params) {
+        if (APP_DEBUG) {
+            // 将 OPTIONS 请求设置为正常返回值.
+            // 解决跨域情况下返回为 404.
+            $method = strtoupper(getenv("REQUEST_METHOD"));
+            if ($method === "OPTIONS") {
+                throw new HttpResponseException(Response::create([], config("default_ajax_return")));
+            }
+        }
     }
     
     public static function actionBegin(&$params) {

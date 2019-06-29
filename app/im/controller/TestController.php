@@ -14,12 +14,93 @@ use app\im\service\SecurityService;
 use app\im\service\IMServiceImpl;
 use app\im\model\RedisModel;
 use think\Queue;
+use app\im\service\SingletonServiceFactory;
+use app\im\model\ModelFactory;
 
 
 class TestController extends Controller {
+    
+    public function getArray() {
+//         $array = [1, 2, 3, 4];
+//         $result = array_combination($array, 3);
+        $array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+//         $array = [1, 2, 3, 4, 5, 6];
+//         $array = [1, 2, 3, 4];
+        $m = 6;
+        // 取组合
+        $result = array_combination($array, $m);
+        echo "size: ".count($result);
+        echo "<br />";
+        echo json_encode($result);
+        echo "<br />";
+        echo "<br />";
+        // 取排列
+        $result = array_permutation($array, $m);
+        echo "size: ".count($result);
+        echo "<br />";
+        echo json_encode($result);
+    }
+    
+    public function getCache() {
+        Cache::store("redis")->set("test", "123");
+        var_dump(Cache::store("redis"));
+        var_dump(Cache::store("redis")->handler());
+        
+        var_dump(Cache::store("redis") === Cache::store("redis"));
+        
+        var_dump(RedisModel::getRedis(true));
+        var_dump(RedisModel::getRedis(true)->rawCommand("GET", "test"));
+    }
+    
     public function getInfo()
     {
         phpinfo();
+    }
+    
+    public function getFun() {
+//         return config("im.im_calling_comm_user_hash");
+        $plus = function($l, $r) {
+            return $l + $r;
+        };
+        
+        $max = function($a, $b, $c) {
+            return $a > $b? ($a > $c? $a: $c): ($b > $c? $b: $c);            
+        };
+        $minus = function ($l, $r) {
+            return $l - $r;
+        };
+        
+        $cminus = function_curry($minus);
+        
+        $m3 = $cminus(F_P_, 3);
+//         var_dump($m3);
+        echo $m3(6);
+        echo "<br />";
+        echo $cminus(2, 4);
+        echo "<br />";
+        echo $cminus(F_P_)(3)(1);
+        echo "<br />";
+//         $cplus = function_curry($plus);
+//         var_dump($p);
+//         $p = $cplus(1);
+//         var_dump($p(2));
+//         var_dump($p(3));
+//         var_dump($p(1));
+//         var_dump($p(-1));
+//         var_dump($cplus(3, 2));
+//         var_dump($cplus(4, 5));
+//         $cmax = function_curry($max);
+//         var_dump($cmax(4, 3, 2));
+//         $m = $cmax(5);
+//         var_dump($m(3, 6));
+//         var_dump($m(7)(-1));
+    }
+    public function getLang() {
+        return lang("invalid user");
+    }
+    
+    public function getCall() {
+        var_dump(SingletonServiceFactory::getCallService()->test(1));
     }
     
     public function getQstr() {
@@ -31,7 +112,8 @@ class TestController extends Controller {
     }
     
     public function getDb() {
-        var_dump(Db::connect(config("database")) === Db::connect(config("database")));
+//         var_dump(Db::connect(config("database")) === Db::connect(config("database")));
+        var_dump(ModelFactory::getUserModel()->existAll(1, 2, 100));
     }
     public function getHeader (){
 //         var_dump(getenv("REMOTE_ADDR"));
@@ -58,12 +140,23 @@ class TestController extends Controller {
         var_dump(model("friends")->isFriend(2, 1));
     }
     public function getUser() {
-        var_dump(model("user")->getUserById(1, 2, 3)->toArray());
+//         echo microtime(true);
+        var_dump(is_numeric("321"));
     }
+    
     public function getRedis() {
-        $redis = RedisModel::getRedis();
-        var_dump($redis->rawCommand("set", "im_124", "321"));
-        $redis -> rawcommand('HSET im_keys group-2 "group-2-im-1553928112"');
+        
+        /**
+         * @var \app\im\util\RedisCacheDriverImpl $cache
+         */
+        $cache = Cache::store("redis");
+        
+        $v = $cache->hvals("test-h");
+        var_dump($v);
+        // sleep(6);
+//         $v = $cache->unlock("g");
+//         var_dump($v);
+        
     }
     
     public function getDecrypt() {
