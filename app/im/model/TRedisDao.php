@@ -58,6 +58,11 @@ trait TRedisDao {
         return $value;
     }
     
+    public function hkeys($key, $cache = null) {
+        if ($cache === null) $cache = $this->handler();
+        return $cache->rawCommand("HKEYS", $key);
+    }
+    
     public function hlen($key) {
         return $this->handler()->rawCommand("HLEN", $key);
     }

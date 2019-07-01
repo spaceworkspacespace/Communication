@@ -738,18 +738,20 @@ class ChatService implements IChatService
         }
     }
     
-    public function requestCallReply($userId, $sign, $replay, $unread) {
+    public function requestCallReply($userId, $sign, $reply, $unread) {
         $callService = SingletonServiceFactory::getCallService();
         $callDetailField = RedisModel::getKeyName("im_chat_calling_communication_hash_key");
+        $callUserField = RedisModel::getKeyName("im_calling_comm_user_hash", ["userId"=>$userId]);
         
         // 通话详情
         $data = RedisModel::hgetJson($callDetailField, $sign);
         if (!$data) {
             im_log("error", "通话详情丢失, sign:", $sign);
+            RedisModel::del($callUserField);
             throw new OperationFailureException();
         }
         // 同意接听
-        if ($replay) {
+        if ($reply != false) {
             // 群聊
             if (isset($data["groupid"])) {
                 return $callService->joinChat($userId, $data["groupid"], $data["ctype"]);
@@ -758,7 +760,13 @@ class ChatService implements IChatService
                 return $callService->establish($userId, $userId2, $sign);
             }
         } else { // 拒绝接听
-            
+            println($userId , " 拒绝了会话 ", $sign, " ", $data);
+            return boolean_select(isset($data["groupid"]), function() use($callUserField) {
+                RedisModel::del($callUserField);
+            }, function() use ($sign, $userId) {
+                println($userId, " 拒绝了会话 " + $sign);
+                $this->requestCallFinish($userId, $sign);
+            });
         }
     }
 
@@ -824,11 +832,13 @@ class ChatService implements IChatService
                     return array_index_pick($user, "userid", "username", "useravatar");
                 });
                 
-                array_map_keys($users[1], function($value, $key) {
+                $users[1] = array_map_keys($users[1], function($value, $key) {
                     return "r$key";                
                 });
+                // println("用户信息", $users);
+                // println("群聊详情", $callDetail);
                 $data = array_merge($callDetail, $users[0], $users[1]);
-    
+                // println("推送信息", $data);
                 $gatewayService->sendToUser($userId2, $data, IGatewayService::COMMUNICATION_FINISH);
             });
         } catch(\Error | \Exception $e) {

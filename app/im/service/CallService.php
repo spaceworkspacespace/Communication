@@ -150,6 +150,39 @@ class CallService implements ICallService {
     }
     
     /**
+     * 获取群聊中正在通话的成员
+     * @param int $userId
+     * @param int $groupId
+     */
+    public function getMembersByGroupId($userId, $groupId) {
+        $groupModel = ModelFactory::getGroupModel();
+        $callGroupField = RedisModel::getKeyName("im_calling_comm_group_hash", ["groupId"=>$groupId]);
+        $sign = RedisModel::hgetJson($callGroupField, "g")["sign"];
+        // 获取当前正在通话的成员的 id
+        $userIds = RedisModel::hkeys($callGroupField);
+        $userIds = array_filter($userIds, function($value) {
+            return is_numeric($value);
+        });
+        // 排除自己的 Id
+        $userIds = array_complementary($userIds, [$userId]);
+        // 获取用户信息
+        // $users = (new \ReflectionClass($this))->getMethod("getUserById")->invokeArgs($this, array_merge([$sign], $userIds));
+        $users = $this->getUserById($sign, ...$userIds);
+        $users = array_map_with_index($users, function($value) {
+            $user = $value;
+            array_key_replace($user, ["userid"=>"id", "useravatar"=>"avatar"]);
+            $user["status"] = "online";
+            return $user;
+        });
+        
+        $groups = $groupModel->getGroupById($groupId);
+        $group = $groups[0];
+        $group["list"] = $users;
+        
+        return $group;
+    }
+    
+    /**
      * 获取通话详情的便利方法
      * @param array $args { sign: string } | { groupId: number } | { userId: number, userId2: number }
      * @return null | array sign 对应的数据, 或者没找到.

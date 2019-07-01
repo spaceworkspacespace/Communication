@@ -39,6 +39,17 @@ function array_combination($array, $m) {
     return $multidimensional;
 }
 
+/**
+ * 求 a 关于 u 的相对补集.
+ * @param array $u
+ * @param array $a
+ * @return array
+ */
+function array_complementary($u, $a) {
+    return array_filter($u, function($value) use ($a) {
+        return array_search($value, $a) !== false? false: true;
+    });
+}
 
 /**
  * 迭代所有元素, 如果回调应用在所有元素上返回值都为 true, 则结果为 true, 否则 false.

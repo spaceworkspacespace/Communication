@@ -48,6 +48,30 @@ class ChatController extends Controller{
         $this->error($msg, "/", $data, 0);
     }
     
+    public function getCallMembers($groupId=null) {
+        $reMsg = '';
+        $failure=false;
+        $reData = null;
+        
+        $callService = SingletonServiceFactory::getCallService();
+        try {
+            $callUserField = RedisModel::getKeyName("im_calling_comm_group_hash", ["groupId"=>$groupId]);
+            if (!is_null($groupId) && RedisModel::exists($callUserField)) {
+                $reData = $callService->getMembersByGroupId(cmf_get_current_user_id(), $groupId);
+                $reData = [$reData];
+            }
+        } catch(OperationFailureException $e) {
+            $failure = true;
+            $reMsg = $e->getMessage();
+        }
+        
+        if ($failure) {
+            $this->success($reMsg, '/', $reData, 0);
+        } else {
+            $this->error($reMsg, '/', $reData, 0);
+        }
+    }
+    
     /**
      * 获取聊天记录
      * @param string $type
