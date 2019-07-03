@@ -48,6 +48,30 @@ class ChatController extends Controller{
         $this->error($msg, "/", $data, 0);
     }
     
+    public function getCallMembers($groupId=null) {
+        $reMsg = '';
+        $failure=false;
+        $reData = null;
+        
+        $callService = SingletonServiceFactory::getCallService();
+        try {
+            $callUserField = RedisModel::getKeyName("im_calling_comm_group_hash", ["groupId"=>$groupId]);
+            if (!is_null($groupId) && RedisModel::exists($callUserField)) {
+                $reData = $callService->getMembersByGroupId(cmf_get_current_user_id(), $groupId);
+                $reData = [$reData];
+            }
+        } catch(OperationFailureException $e) {
+            $failure = true;
+            $reMsg = $e->getMessage();
+        }
+        
+        if ($failure) {
+            $this->success($reMsg, '/', $reData, 0);
+        } else {
+            $this->error($reMsg, '/', $reData, 0);
+        }
+    }
+    
     /**
      * 获取聊天记录
      * @param string $type
@@ -115,70 +139,73 @@ class ChatController extends Controller{
     }
     
     public function postCall($stage=null,
-    $id=null, $chatType=null, $type=null,
-    $sign=null, $unread=null, $replay=null,
-    $description=null, $call=null, $success=null,
-    $ice = null, $error = null, $errmsg = null) {
-        $bool = true;
+        $id=null, $chatType=null, $type=null,
+        $sign=null, $unread=null, $reply=null,
+        $description=null, $call=null, $success=null,
+        $ice = null, $error = null, $errmsg = null) {
+        
+        $reMsg = "";
+        $reData = null;
+        $failure = false;
+        
         $chatService = SingletonServiceFactory::getChatService();
         try {
             // 请求通话
             if ($stage == null) {
-                if (!is_string($chatType) || is_null($id) || !is_string($type)) {
+                if (!is_string($chatType) 
+                    || is_null($id) 
+                    || !is_string($type)) {
                     throw new OperationFailureException("聊天对象未确定.");
                 }
                 switch($chatType) {
                     case "group":
-                        $bool = $chatService->requestCallWithGroup($this->userId, $id, $type);
+                        $reData = $chatService->requestCallWithGroup($this->userId, $id, $type);
                         break;
                     case "friend":
-                        $bool = $chatService->requestCallWithFriend($this->userId, $id, $type);
+                        $reData = $chatService->requestCallWithFriend($this->userId, $id, $type);
                         break;
                     default:
                         throw new OperationFailureException("聊天对象未确定");
                 }
-            }else{
+            } else {
                 switch ($stage){
                     case "reply"://请求应答
-                        $bool = $chatService->requestCallReply($this->userId,$sign, $replay, $unread);
+                        $chatService->requestCallReply($this->userId,$sign, $reply, $unread);
                         break;
-                    case "exchange"://交换描述
-                        if($call == null){
-                            $bool = $chatService->requestCallUserExchange($this->userId, $sign, $description);
-                        }else{
-                            $key = key($call);
-                            $bool = $chatService->requestCallGroupExchange($this->userId, $key, $call[$key]);
-                        }
-                        break;
-                    case "exchange-ice"://交换ice
-                        if($call == null){
-                            $bool = $chatService->requestCallUserExchangeIce($this->userId, $sign, $ice);
-                        }else{
-                            $key = key($call);
-                            $bool = $chatService->requestCallGroupExchangeIce($this->userId, $key, $call[$key]);
-                        }
+                    case "exchange": // 交换描述
+                    case "exchange-ice": // 交换ice
+                        $chatService->requestCallExchange([ 
+                            "sign"=>$sign, 
+                            "userId"=>cmf_get_current_user_id(), 
+                            "desc"=>$description, 
+                            "ice"=> $ice, 
+                            "call"=> $call ]);
                         break;
                     case "complete"://连接完成
-                        $bool = $chatService->requestCallComplete($sign, $success);
+                        $chatService->requestCallComplete($sign, $success);
                         break;
-                    case "finish"://挂断
+                    case "finish": // 通话完成
                         if($error){
-                            throw new OperationFailureException($errmsg);
+                            im_log("notice", "通话完成, 但发生了错误.", $errmsg);
                         }
-                        $bool = $chatService->requestFinish($this->userId, $sign);
+                        $chatService->requestCallFinish($this->userId, $sign, $error);
                         break;
                     default:
                         throw new OperationFailureException("请求错误！");
                         break;
                 }
             }
-        } catch (\Exception $e) {
-            $bool = false;
-            im_log("error", "错误：".$e->getMessage().",行号：".$e->getLine());
         } catch (OperationFailureException $e) {
-            throw new OperationFailureException($e);
+            $failure = true;
+            $reMsg = $e->getMessage();
+        } 
+        
+        if ($failure) {
+            $this->success($reMsg, "/", $reData, 0);
+        } else {
+            $this->error($reMsg, "/", $reData, 0);
         }
-        return $bool?$this->error("成功"):$this->success("失败");
+        
     }
 
     /**

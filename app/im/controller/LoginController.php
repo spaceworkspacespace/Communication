@@ -68,7 +68,7 @@ class LoginController extends HomeBaseController
             }
 
             if (!cmf_captcha_check($data['captcha'])) {
-//                 $this->error(lang('CAPTCHA_NOT_RIGHT'));
+                $this->error(lang('CAPTCHA_NOT_RIGHT'));
             }
 
             $userModel         = new UserModel();

@@ -2,6 +2,8 @@
 
 use think\Route;
 
+
+Route::controller("test", "im/test");
 // 联系人操作
 Route::group("im", function () {
     Route::controller("contact", "contact");
@@ -9,7 +11,6 @@ Route::group("im", function () {
     Route::controller("message", "msgbox");
     Route::controller("user", "user");
     Route::controller("comm", "comm");
-    Route::controller("test", "test");
     
     Route::any('comment/:name',"comment/:name");
     Route::any('favorite/:name',"favorite/:name");

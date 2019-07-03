@@ -2,6 +2,14 @@
 namespace app\im\model;
 
 interface IUserModel {
+    
+    /**
+     * 判断给出的用户 id 是否全部有效
+     * @param array ...$userIds
+     * @return bool
+     */
+    public function existAll(...$userIds): bool;
+    
     /**
      * 通过用户 id 获取用户信息
      * @param mixed ...$userId

@@ -2,12 +2,20 @@
 namespace app\im\service;
 
 class SingletonServiceFactory {
+    private static $callService = null;
     private static $chatService = null;
     private static $contactService = null;
     private static $gatewayService = null;
     private static $messageService = null;
     private static $pushService = null;
     private static $userService = null;
+    
+    public static function getCallService(): ICallService {
+        if (static::$callService == null) {
+            static::$callService = new CallService();
+        }
+        return static::$callService;
+    }
     
     public static function getChatService(): IChatService {
         if (static::$chatService == null) {

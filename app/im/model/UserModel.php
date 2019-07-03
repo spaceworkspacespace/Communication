@@ -9,6 +9,18 @@ class UserModel extends Model implements IUserModel {
         'more' => 'array',
     ];
     
+    public function existAll(...$userIds): bool {
+        // 有效的 id 数
+        $count = Db::table("cmf_user")
+            ->whereIn("id", $userIds)
+            ->count("id");
+        if ($count !== count($userIds)) {
+            return false;
+        }
+        return true;
+    }
+    
+    
     public function getUserById(...$userId) {
         $users = $this->getQuery()
             ->field("id, avatar, user_nickname AS username, signature AS sign")
@@ -76,7 +88,7 @@ class UserModel extends Model implements IUserModel {
     
     public function getFriendById($id)
     {
-        return Db::table(cmf_user)
+        return Db::table("cmf_user")
         ->where(['id' => $id])
         ->find('user_nickname AS username,id,avatar,signature AS sign,sex');
     }

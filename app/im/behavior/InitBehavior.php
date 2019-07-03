@@ -27,10 +27,6 @@ class InitBehavior {
 //         header("Access-Control-Allow-Origin:".$_GET["_origin"]);
     }
     
-    public static function actionBegin(&$params) {
-        Gateway::$registerAddress = config("gateway.remote");
-    }
-    
     public static function moduleInit(&$params) {
         if (APP_DEBUG) {
             // 将 OPTIONS 请求设置为正常返回值.
@@ -40,6 +36,10 @@ class InitBehavior {
                 throw new HttpResponseException(Response::create([], config("default_ajax_return")));
             }
         }
+    }
+    
+    public static function actionBegin(&$params) {
+        Gateway::$registerAddress = config("gateway.remote");
     }
     
     public static function _forceAjax() {

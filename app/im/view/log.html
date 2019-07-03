@@ -33,7 +33,7 @@
 
 	<script src="__STATIC__/libs/jquery-3.3.1.min.js"></script>
 	<script src="__STATIC__/js/gateway-client.js"></script>
-	<script src="__STATIC__/js/vue-2.6.9.js"></script>
+	<script src="__STATIC__/libs/vue-2.6.9.js"></script>
 	<script type="text/javascript">
 		var vue = new Vue({
 			el: "#app",
@@ -58,7 +58,7 @@
 					// 当前显示的日志
 					show: [],
 					// 数据量
-					capacity: 1000,
+					capacity: 500,
 				};
 			},
 
@@ -143,12 +143,16 @@
 						this.show.unshift(message);
 					}
 					// 判断数据量, 避免程序崩溃
-					if (Object.values(this.logs).reduce(function (count, m) { return count + m.length }, 0) > this.capacity) {
-						// 缩减策略是每种类型的日志都清除最旧的 1/3
+					var logTotalLen = Object.values(this.logs).reduce(function (count, m) { return count + m.length }, 0);
+					// console.log("总长度: ", logTotalLen);
+					if ( logTotalLen > this.capacity) {
+						// 缩减策略是每种类型的日志都清除最旧的 1/2
 						for (var prop of Object.keys(this.logs)) {
 							var dataLen = this.logs[prop].length;
-							this.logs[prop] = this.logs[prop].slice(Math.floor(dataLen / 3));
+							this.logs[prop] = this.logs[prop].slice(0, dataLen / 2);
 						}
+						// 清除当前正在显示的
+						this.show = this.show.slice(0, this.capacity / 2);  
 						console.log("清除了一些数据");
 					}
 				}

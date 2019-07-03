@@ -12,6 +12,7 @@ interface IGatewayService {
     public const COMMUNICATION_COMMAND_TYPE = "COMMUNICATION-COMMAND";
     public const COMMUNICATION_ICE_TYPE = "COMMUNICATION-ICE";
     public const COMMUNICATION_MEMBER_TYPE = "COMMUNICATION-MEMBER";
+    public const COMMUNICATION_FINISH = "COMMUNICATION-FINISH";
     public const TYPE_FRIEND_REMOVE = 16;
     public const TYPE_GROUP_REMOVE = 22;
     

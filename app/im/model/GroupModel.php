@@ -44,6 +44,17 @@ class GroupModel extends IMModel implements IGroupModel {
         return $data;
     }
     
+    public function existAll(...$groupIds): bool {
+        // 有效的 id 数
+        $count = Db::table("im_group")
+            ->whereIn("id", $groupIds)
+            ->count("id");
+        if ($count !== count($groupIds)) {
+            return false;
+        }
+        return true;
+    }
+    
     public function queryMyPermi($id, $gid)
     {
         $isAdmin = Db::table('im_group a,im_groups b')
@@ -112,7 +123,7 @@ class GroupModel extends IMModel implements IGroupModel {
             ->whereIn("id", $groupId)
             ->select()
             ->toArray();
-        
+//         println($groupId, $groups);
         if (count($groupId) == 1) return $groups;
         // 作一次排序, 让结果的顺序和参数 id 顺序一致.
         $result = [];
@@ -284,6 +295,24 @@ SQL;
             }
         }
         return $result;
+    }
+    
+    public function getMemberList($groupId,$include = false){
+        $list = $this->where("id",$groupId)->field("id,groupname,description,avatar,create_time createtime,admin_id admin")->find();
+        $groups = model("groups")->alias("g")->where("contact_id",$groupId)->join(["cmf_user"=>"u"],"g.user_id = u.id")->field("u.user_login username,u.id,u.avatar,u.signature sign,u.sex,g.is_admin isadmin")->select()->toArray();
+        $list["membercount"] = count($groups);
+        $list["admincount"] = model("groups")->where(["contact_id"=>$groupId,"is_admin"=>1])->count();
+        if($include && !empty($groups)){
+            $userService = SingletonServiceFactory::getUserService();
+            $arr = array(1=>"男",2=>"女");
+            foreach ($groups as $key => $val){
+                $groups[$key]["status"] = $userService->isOnline($val["id"])?"online":"offline";
+                $groups[$key]["isadmin"] = $val["isadmin"] == 1?true:false;
+                $groups[$key]["sex"] = array_key_exists($val["sex"], $arr)?$arr[$val["sex"]]:"保密";
+            }
+            $list["list"] = $groups;
+        }
+        return $list;
     }
     
     public function getOriginGroupByUser($userId, $groupId, $fields="*")  {
@@ -559,23 +588,4 @@ SQL;
         ->select()
         ->toArray();
     }
-
-    public function getMemberList($groupId,$include = false){
-        $list = $this->where("id",$groupId)->field("id,groupname,description,avatar,create_time createtime,admin_id admin")->find();
-        $groups = model("groups")->alias("g")->where("contact_id",$groupId)->join(["cmf_user"=>"u"],"g.user_id = u.id")->field("u.user_login username,u.id,u.avatar,u.signature sign,u.sex,g.is_admin isadmin")->select()->toArray();
-        $list["membercount"] = count($groups);
-        $list["admincount"] = model("groups")->where(["contact_id"=>$groupId,"is_admin"=>1])->count();
-        if($include && !empty($groups)){
-            $userService = SingletonServiceFactory::getUserService();
-            $arr = array(1=>"男",2=>"女");
-            foreach ($groups as $key => $val){
-                $groups[$key]["status"] = $userService->isOnline($val["id"])?"online":"offline";
-                $groups[$key]["isadmin"] = $val["isadmin"] == 1?true:false;
-                $groups[$key]["sex"] = array_key_exists($val["sex"], $arr)?$arr[$val["sex"]]:"保密";
-            }
-            $list["list"] = $groups;
-        }
-        return $list;
-    }
-
 }
