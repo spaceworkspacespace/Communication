@@ -9,5 +9,9 @@ return [
     "keys_update" => [],
     "gateway_send" => [
         "app\\im\\behavior\\MsgCryptoBehavior",
-    ]
+    ],
+    // 模块初始化
+    'module_init' => [
+        'app\\im\\behavior\\InitBehavior',
+    ],
 ];

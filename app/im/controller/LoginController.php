@@ -14,6 +14,7 @@ use think\Validate;
 use cmf\controller\HomeBaseController;
 use app\user\model\UserModel;
 use app\im\model\ModelFactory;
+use app\im\util\Jwt;
 
 class LoginController extends HomeBaseController
 {
@@ -86,8 +87,19 @@ class LoginController extends HomeBaseController
             $redirect                   = empty($session_login_http_referer) ? $this->request->root() : $session_login_http_referer;
             switch ($log) {
                 case 0:
+                    $jwt = new Jwt();
+                    $model = new \app\im\model\UserModel();
+                    $userData = $model->login($data['username'], $data['password']);
+                    $reTime = time();
+                    $token = $jwt->getToken([
+                        'user'=>$userData, // 该JWT的签发者
+                        'iat'=>$reTime, // 签发时间
+                        'exp'=>$reTime+60*60*2, // 过期时间
+                        'nbf'=>$reTime, // 该时间之前不接收处理该Token
+                        'jti'=>md5(uniqid('JWT').time()) // 该Token唯一标识
+                    ]);
                     cmf_user_action('login');
-                    $this->success(lang('LOGIN_SUCCESS'), $redirect);
+                    $this->success(lang('LOGIN_SUCCESS'), $redirect, $token);
                     break;
                 case 1:
                     $this->error(lang('PASSWORD_NOT_RIGHT'));
@@ -107,24 +119,70 @@ class LoginController extends HomeBaseController
     }
     
     public function login($username, $password) {
+        if(!$this->request->isPost()){
+            $this->success("请求错误");
+        }
+        
         $validate = new Validate([
-            'captcha'  => 'require',
             'username' => 'require',
             'password' => 'require|min:6|max:32',
         ]);
+        
         $validate->message([
             'username.require' => '用户名不能为空',
             'password.require' => '密码不能为空',
             'password.max'     => '密码不能超过32个字符',
             'password.min'     => '密码不能小于6个字符',
-            'captcha.require'  => '验证码不能为空',
         ]);
-        $model = ModelFactory::getUserModel();
-        $user = $model->login($username, $password);
-        if(empty($user)){
-            $this->error("账号或密码错误");
+        
+        $data = $this->request->post();
+        if (!$validate->check($data)) {
+            $this->error($validate->getError());
         }
-        $this->error("登陆成功", "/", $user, 0);
+        
+        $userModel         = new UserModel();
+        $user['user_pass'] = $data['password'];
+        if (Validate::is($data['username'], 'email')) {
+            $user['user_email'] = $data['username'];
+            $log                = $userModel->doEmail($user);
+        } else if (cmf_check_mobile($data['username'])) {
+            $user['mobile'] = $data['username'];
+            $log            = $userModel->doMobile($user);
+        } else {
+            $user['user_login'] = $data['username'];
+            $log                = $userModel->doName($user);
+        }
+        $session_login_http_referer = session('login_http_referer');
+        $redirect                   = empty($session_login_http_referer) ? $this->request->root() : $session_login_http_referer;
+        switch ($log) {
+            case 0:
+                $jwt = new Jwt();
+                $model = new \app\im\model\UserModel();
+                $userData = $model->login($data['username'], $data['password']);
+                $reTime = time();
+                $token = $jwt->getToken([
+                    'user'=>$userData, // 该JWT的签发者
+                    'iat'=>$reTime, // 签发时间
+                    'exp'=>$reTime+60*60*2, // 过期时间
+                    'nbf'=>$reTime, // 该时间之前不接收处理该Token
+                    'jti'=>md5(uniqid('JWT').time()) // 该Token唯一标识
+                ]);
+                cmf_user_action('login');
+                $this->success(lang('LOGIN_SUCCESS'), $redirect, ["token"=>$token]);
+                break;
+            case 1:
+                $this->error(lang('PASSWORD_NOT_RIGHT'));
+                break;
+            case 2:
+                $this->error('账户不存在');
+                break;
+            case 3:
+                $this->error('账号被禁止访问系统');
+                break;
+            default :
+                $this->error('未受理的请求');
+        }
+        
     }
 
     /**
@@ -194,7 +252,6 @@ class LoginController extends HomeBaseController
                 default :
                     $this->error('未受理的请求');
             }
-
         } else {
             $this->error("请求错误");
         }

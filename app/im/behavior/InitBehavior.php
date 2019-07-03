@@ -2,7 +2,10 @@
 namespace app\im\behavior;
 
 use app\im\service\SecurityService;
+use think\Response;
 use GatewayClient\Gateway;
+use think\exception\HttpResponseException;
+use app\im\util\Jwt;
 
 class InitBehavior {
     public const forceAjaxUrl = [
@@ -16,6 +19,7 @@ class InitBehavior {
         session_start();
         static::_decryptBody();
         static::_forceAjax();
+        static::checkJwt();
         $_SESSION["x_in_transaction"] = false;
 //         var_dump($_SESSION);
         // 测试设置跨域头
@@ -25,6 +29,17 @@ class InitBehavior {
     
     public static function actionBegin(&$params) {
         Gateway::$registerAddress = config("gateway.remote");
+    }
+    
+    public static function moduleInit(&$params) {
+        if (APP_DEBUG) {
+            // 将 OPTIONS 请求设置为正常返回值.
+            // 解决跨域情况下返回为 404.
+            $method = strtoupper(getenv("REQUEST_METHOD"));
+            if ($method === "OPTIONS") {
+                throw new HttpResponseException(Response::create([], config("default_ajax_return")));
+            }
+        }
     }
     
     public static function _forceAjax() {
@@ -137,6 +152,22 @@ class InitBehavior {
             if (is_array($post)) {
                 foreach ($post as $k => $v) {
                     $_POST[$k]=$v;
+                }
+            }
+        }
+    }
+
+    public static function checkJwt(){
+        $jwt = new Jwt();
+        
+        if(array_key_exists('HTTP_AUTHORIZATION', $_SERVER)){
+            $token = $_SERVER['HTTP_AUTHORIZATION'];
+            if($getPayload = $jwt->verifyToken($token)){ //验证token是否有效
+                im_log("error", $getPayload);
+                if(is_array($getPayload)){
+                    session('user', $getPayload['user']);
+                }else{
+                    Header("Location:".cmf_url("#/index"));
                 }
             }
         }
