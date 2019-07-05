@@ -5,6 +5,7 @@ use GatewayClient\Gateway;
 use app\im\exception\OperationFailureException;
 use app\im\model\RedisModel;
 use app\im\model\ModelFactory;
+use think\Cache;
 
 class ChatService implements IChatService
 {
@@ -188,7 +189,12 @@ class ChatService implements IChatService
                 }
                 break;
             case IGatewayService::COMMUNICATION_ASK_TYPE:
-                $cache->rawCommand("HSET", config("im.im_chat_calling_communication_hash_key"), $data['payload']['data']['sign'], json_encode($data['payload']['data']));
+                $detail_h = RedisModel::getKeyName("detail_h");
+                $callSign = $data['payload']['data']['sign'];
+                $callDetail = $data['payload']['data'];
+                if (!RedisModel::exists($detail_h)) {
+                    RedisModel::hsetJson($detail_h, $callSign, $callDetail);
+                }
                 break;
             default:
                 im_log("notice", "反馈了未实现处理方式的消息: ", $data);
@@ -630,6 +636,76 @@ class ChatService implements IChatService
         }
     }
     
+    public function requestCallReconnection($sign, $userId, $userId2, $connectId=null) {
+        $userKey = RedisModel::getKeyName("user_h", ["userId"=>$userId]);
+        $userKey2 = RedisModel::getKeyName("user_h", ["userId"=>$userId2]);
+        
+        $detail = RedisModel::hget(RedisModel::getKeyName("detail_h"), $sign);
+        
+        if (!is_array($detail)) {
+            throw new OperationFailureException(lang("the call doesn't exist"));
+        }
+        if (!RedisModel::exists($userKey) 
+            || !RedisModel::exists($userKey2)) {
+            throw new OperationFailureException(lang("invalid user"));        
+        }
+        
+        // 获取用户信息
+        $getUserInfo = function($users, $ruserid) {
+            $ruserindex = $users[0]["id"] !== $ruserid? 1: 0;
+            $users = array_map_with_index($users, function($value) {
+                $user = $value;
+                array_key_replace($user, ["id"=>"userid", "avatar"=>"useravatar"]);
+                return array_index_pick($user, "userid", "useravatar", "username");
+            });
+            $users[$ruserindex] = array_map_keys($users[$ruserindex], function($value, $key) {
+                return "r$key";
+            });
+            return array_flatten($users);
+        };
+        $userModel = ModelFactory::getUserModel();
+        $users = $userModel->getUserById($userId, $userId2);
+        $getUserInfo = function_curry($getUserInfo)($users);
+        
+        // 如果是新的重连需求, 生成新的 connectid, 并推送给双方通知客户端重置连接.
+        $gateway = SingletonServiceFactory::getGatewayService();
+        if (!is_string($connectId) 
+            || strlen(trim($connectId)) === 0) {
+                
+            $connectId = time();
+            $gateway->sendToUser($userId2, 
+                array_merge(["connectid"=>$connectId], $detail, $getUserInfo($userId2)), 
+                IGatewayService::COMMUNICATION_RECONNECT_TYPE);
+            $gateway->sendToUser($userId, 
+                array_merge(["connectid"=>$connectId], $detail, $getUserInfo($userId)), 
+                IGatewayService::COMMUNICATION_RECONNECT_TYPE);
+            return;
+        }
+        
+        $cache = Cache::store("redis");
+        try {
+            if ($cache->lock($userKey) || $cache->lock($userKey2)) {
+                throw new OperationFailureException(lang('server busy'));
+            }
+            
+            // 如果双方的 connectId 一致, 就重新连接, 否则就先保存，之后使用
+            $userCallInfo2 = RedisModel::hgetJson($userKey2, $userId);
+            if (isset($userCallInfo2["connectid"]) 
+                && (string)$userCallInfo2["connectid"] === "$connectId") {
+                $callService = SingletonServiceFactory::getCallService();
+                // RedisModel::hdel();
+                $callService->establish($userId, $userId2, $sign);
+            } else {
+                $userCallInfo = RedisModel::hgetJson($userKey, $userId2);
+                $userCallInfo['connectid'] = $connectId;
+                RedisModel::hsetJson($userKey, $userId2, $userCallInfo);
+            }
+        } finally {
+            $cache->unlock($userKey);
+            $cache->unlock($userKey2);
+        }
+    }
+    
     /**
      * 客户端之间交换 ice 和 desc 的步骤, 要做的事情一样, 就写一起了.
      * @param mixed $args { sign?: string, userId: number, desc?: string, ice?: string, call?: array }
@@ -764,43 +840,43 @@ class ChatService implements IChatService
             return boolean_select(isset($data["groupid"]), function() use($callUserField) {
                 RedisModel::del($callUserField);
             }, function() use ($sign, $userId) {
-                println($userId, " 拒绝了会话 " + $sign);
+                println($userId, " 拒绝了会话 ", $sign);
                 $this->requestCallFinish($userId, $sign);
             });
         }
     }
 
-    public function requestCallComplete($sign, $success)
-    {
-        $bool = true;
-        try {
-            $redis = RedisModel::getRedis();
-            $hashName = config("im.im_chat_calling_communication_hash_key");
-            $data = json_decode($redis->rawCommand("HGET", $hashName, $sign), true);
-            if ($success) { // 当连接成功时
-                im_log("error", "连接成功");
-                return $bool;
-            }
-            if (empty($data)) {
-                im_log("error", "该通话已中断");
-                throw new OperationFailureException("该通话已中断");
-            }
-            $redis->rawCommand("HDEL", $hashName, $data["sign"]);
-            if (isset($data["userid"])) {
-                return $this->requestCallUserComplete($data);
-            }
-            if (isset($data["groupid"])) {
-                return $this->requestCallGroupComplete($this->userId, $sign, $data);
-            }
-        } catch (\Exception $e) {
-            im_log("error", $e->getMessage());
-            $bool = false;
-            $this->callOver($data['userid'], $data['ruserid'], null, $sign);
-            throw $e;
-        } catch (OperationFailureException $e) {
-            throw new OperationFailureException($e);
+    public function requestCallComplete($userId, $sign, $success) {
+        // 如果连接失败, 调用断线
+        if (!$success) {
+            return $this->requestCallFinish($userId, $sign, "连接失败");
         }
-        return $bool;
+        // 设置通话中
+        // $detail_h = RedisModel::getKeyName("detail_h");
+        $calling_l = RedisModel::getKeyName("calling_l");
+        $calling_h = RedisModel::getKeyName("calling_h");
+        
+        $cache = Cache::store("redis");
+        try {
+            if (!$cache->lock($calling_l)
+                || !$cache->lock($calling_h)) {
+                im_log("error", "加锁失败. ", $calling_l, " ", $calling_h);
+                throw new OperationFailureException("加锁失败. $calling_l $calling_h");
+            }
+            RedisModel::lpush($calling_l, $userId);
+            RedisModel::hsetJson($calling_h, $userId, [
+                "timestamp"=>time(),
+                "losecount"=>0,
+            ]);
+        } catch (OperationFailureException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            im_log("error", $e);
+            throw new OperationFailureException();
+        } finally {
+            $cache->unlock($calling_l);
+            $cache->unlock($calling_h);
+        }
     }
     
     public function requestCallFinish($userId, $sign, $error=false)
@@ -846,5 +922,4 @@ class ChatService implements IChatService
             throw new OperationFailureException();
         }
     }
-
 }

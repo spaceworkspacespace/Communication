@@ -3,10 +3,10 @@ namespace app\im\controller;
 
 use app\im\exception\OperationFailureException;
 use think\Controller;
-use app\im\model\ModelFactory;
 use app\im\model\RedisModel;
 use app\im\service\IChatService;
 use app\im\service\SingletonServiceFactory;
+use think\Cache;
 
 class ChatController extends Controller{
     protected $beforeActionList = [
@@ -70,6 +70,16 @@ class ChatController extends Controller{
         } else {
             $this->error($reMsg, '/', $reData, 0);
         }
+    }
+    
+    public function getIceServer() {
+        $user = cmf_get_current_user();
+        // var_dump($user);
+        $iceConfig = config("im.iceserver");
+        $iceConfig["iceServers"] = array_map_with_index($iceConfig["iceServers"], function($value) use($user) {
+            return array_merge($value, ["username"=>$user["user_nickname"], "credential"=>""]);
+        });
+        $this->error("", "/", $iceConfig, 0);
     }
     
     /**
@@ -138,6 +148,26 @@ class ChatController extends Controller{
         }
     }
     
+    public function postCallReconnect($sign, $userId) {
+        $reMsg = "";
+        $reData = null;
+        $failure = false;
+        
+        $callService = SingletonServiceFactory::getCallService();
+        try {
+            $callService->requestCallReconnection(cmf_get_current_user_id(), $userId, $sign);
+        } catch (OperationFailureException $e) {
+            $failure = true;
+            $reMsg = $e->getMessage();
+        }
+
+        if ($failure) {
+            $this->success($reMsg, "/", $reData, 0);
+        } else {
+            $this->error($reMsg, "/", $reData, 0);
+        }
+    }
+    
     public function postCall($stage=null,
         $id=null, $chatType=null, $type=null,
         $sign=null, $unread=null, $reply=null,
@@ -182,7 +212,7 @@ class ChatController extends Controller{
                             "call"=> $call ]);
                         break;
                     case "complete"://连接完成
-                        $chatService->requestCallComplete($sign, $success);
+                        $chatService->requestCallComplete(cmf_get_current_user_id(), $sign, $success);
                         break;
                     case "finish": // 通话完成
                         if($error){
@@ -205,7 +235,6 @@ class ChatController extends Controller{
         } else {
             $this->error($reMsg, "/", $reData, 0);
         }
-        
     }
 
     /**
@@ -235,50 +264,64 @@ class ChatController extends Controller{
     }
     
     //掉线处理 结束通话
-    public function postOfflineProcessing($client_id) {
-        $i = 0;
-        $bool = false;
-        $redis = RedisModel::getRedis();
-        $model = ModelFactory::getChatFriendModel();
-        $service = SingletonServiceFactory::getChatService();
-        $isOnline = config("im.cache_chat_online_user_key");
-        $userCall = json_decode($redis->rawCommand("HGETALL","im_call_calling_user_".$client_id."_hash"), true);
-        if(empty($userCall)){
-            return $this->error("成功");
-        }
-        $userIds = explode("-", $userCall['sign']);
-        if($userIds[0] == $client_id){
-            $client_id2 = $userIds[1];
-        }else{
-            $client_id2 = $userIds[0];
-        }
-        $data = $redis->rawCommand("SMEMBERS", $isOnline);
-        foreach ($data as $value) {
-            if($value === $client_id){
-                $redis->rawCommand("SREM", $isOnline, $i);
-                //结束通话
-                if(count($userIds) == 3){
-                    $bool = $service->requestFinish($client_id, $userIds[2]);
-                }else{
-                    $bool = $service->requestFinish($client_id, $userIds[1]);
+    public function postOfflineProcessing($userId, $message=null) {
+        $reMsg = "";
+        $reData = null;
+        $failure = false;
+        
+        $user_h = RedisModel::getKeyName("user_h", ["userId"=>$userId]);
+        $calling_l = RedisModel::getKeyName("calling_l");
+        $calling_h = RedisModel::getKeyName("calling_h");
+        
+        $cache = Cache::store("redis");
+        im_log("notice", RedisModel::get("test"));
+        try {
+            
+            if (!RedisModel::exists($user_h)) {
+                im_log("error", "对 ", $user_h, " 进行掉线处理, 但没有此 redis key.");
+                // 删除
+              
+                if ($cache->lock($calling_l, 15)  && $cache->lock($calling_h, 15)) {
+                    println(implode(" ", ["离线处理", $calling_l, $calling_h, $userId]));
+                    // println("删除 $calling_l ", RedisModel::lrem($calling_l,  $userId, 0));
+                    // println("删除 $calling_h ", RedisModel::hdel($calling_h, $userId));
+                    RedisModel::lrem($calling_l,  $userId, 0);
+                    RedisModel::hdel($calling_h, $userId);
+                    // RedisModel::lrem($calling_l,  $userId, 0);
+                    // RedisModel::hdel($calling_h, $userId);
                 }
-                $model->addInfo($client_id, $client_id2, "通话异常中断");
-                $model->addInfo($client_id2, $client_id, "通话异常中断");
-                $service->sendToUser($client_id, $client_id2, implode([
-                    "json",json_encode([
-                        "type"=>"call",
-                        "data"=>[
-                            "receiver_result"=>"success",//童话异常中断
-                            "type"=>$userCall['ctype'],
-                            "time"=>time()-$userCall['createTime']
-                        ]
-                    ])
-                ]));
-                break;
+                $cache->unlock($calling_l);
+                $cache->unlock($calling_h);
+                throw new OperationFailureException();
             }
-            $i++;
+            if (is_null($message)) {
+                $message = lang("network error");
+            }
+            
+            $chatService = SingletonServiceFactory::getChatService();
+            // 群聊或双人聊天的掉线分别处理.
+            // 群聊有 g 属性
+            if (RedisModel::hexists($user_h, "g")) {
+                $g = RedisModel::hgetJson($user_h, "g");
+                $chatService->requestCallFinish($userId, $g["sign"], $message);
+            } else {
+                $others = RedisModel::hgetallJson($user_h);
+                array_for_each($others, function($other, $key) use ($chatService, $userId, $message) {
+                    if (is_numeric($key)) {
+                        $chatService->requestCallFinish($userId, $other["sign"], $message);
+                        $chatService->requestCallFinish($key, $other["sign"], $message);
+                    }
+                });
+            }
+        } catch (OperationFailureException $e) {
+            $reMsg = $e->getMessage();
+            $failure = true;
         }
-        return $bool?$this->error("成功"):$this->success("失败");
+        if ($failure) {
+            $this->success($reMsg, "/", $reData, 0);
+        } else {
+            $this->error($reMsg, "/", $reData, 0);
+        }
     }
     
     /**
@@ -289,60 +332,4 @@ class ChatController extends Controller{
         SingletonServiceFactory::getChatService()->messageFeedback(cmf_get_current_user_id(), $sign);
         return $sign;
     }
-    
-    /*
-    public function sendMessage($id, $type, $content){
-        $data=[];
-        $data['type'] = 'chatMessage';
-        $id = $str['to']['id'];
-        if(isset($id)){
-            switch ($str['to']['type']){
-                case 'friend':
-                    $str['mine']['type'] = $str['to']['type'];
-                    $str['mine']['mine'] = false;
-                    $data['data'][] = $str['mine'];
-                    $this->friendchat($id,$str['mine']['content'],'friend');
-                    if(Gateway::isUidOnline($id)){
-                        GatewayServiceImpl::msgToUid($id, $data);
-                        //聊天记录储存
-                        $data = json_encode(['code'=>1,'id'=>$id]);
-                    }else{
-                        //聊天记录储存
-                        $data = json_encode(['code'=>0,'type'=>'friend','id'=>$id]);
-                    }
-                    break;
-                case 'group':
-                    $data['uid'] = cmf_get_current_user_id();
-                    $str['mine']['type'] = $str['to']['type'];
-                    $str['mine']['mine'] = false;
-                    $str['mine']['id'] = $id;
-                    $data['data'][] = $str['mine'];
-                    $this->friendchat($id,$str['mine']['content'],'group');
-                    GatewayServiceImpl::msgToGroup($id, $data);
-                    //聊天记录储存
-                    $data = json_encode(['code'=>1,'type'=>'group','id'=>$id]);
-                    break;
-                default:
-                    break;
-            }
-            return $data;
-        }
-    }
-    
-    //保存好友聊天记录
-    public function friendchat($id,$str,$type){
-        $arr['send_ip'] = get_client_ip(0, true);
-        $arr['sender_id'] = cmf_get_current_user_id();
-        $arr['send_date'] = date('Y-m-d H:i:s');
-        $arr['content'] = $str;
-        if($type == 'group'){
-            $arr['group_id'] = $id;
-            $chat = new ChatGroupModel();
-        }else if($type == 'friend'){
-            $arr['receiver_id'] =$id;
-            $chat = new ChatUserModel();
-        }
-        $chat->save($arr);
-    }
-    */
 }

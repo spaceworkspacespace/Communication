@@ -120,7 +120,7 @@ interface IChatService {
      *@param boolean $success
      *@return bool
      */
-    public function requestCallComplete($sign,$success);
+    public function requestCallComplete($userId, $sign, $success);
     
     
     /**

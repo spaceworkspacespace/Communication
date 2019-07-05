@@ -168,21 +168,20 @@ class LoginController extends HomeBaseController
                     'jti'=>md5(uniqid('JWT').time()) // 该Token唯一标识
                 ]);
                 cmf_user_action('login');
-                $this->success(lang('LOGIN_SUCCESS'), $redirect, ["token"=>$token]);
+                $this->error(lang('LOGIN_SUCCESS'), $redirect, ["token"=>$token]);
                 break;
             case 1:
-                $this->error(lang('PASSWORD_NOT_RIGHT'));
+                $this->success(lang('PASSWORD_NOT_RIGHT'));
                 break;
             case 2:
-                $this->error('账户不存在');
+                $this->success('账户不存在');
                 break;
             case 3:
-                $this->error('账号被禁止访问系统');
+                $this->success('账号被禁止访问系统');
                 break;
             default :
-                $this->error('未受理的请求');
+                $this->success('未受理的请求');
         }
-        
     }
 
     /**

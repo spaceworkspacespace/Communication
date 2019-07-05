@@ -17,7 +17,10 @@ class Config {
     public static function getFromDefault(string $name, string $sp = ".") {
         $k = explode($sp, $name);
         return array_reduce($k, function($config, $key) {
-            return $config[$key];
+            if (is_array($config) && isset($config[$key])) {
+                return $config[$key];
+            }
+            return null;
         }, static::$default_conf);
     }
 }

@@ -19,3 +19,9 @@
 !/public/static/js/initIM.js
 !/public/static/js/gateway-client.js
 !/Applications
+
+# 测试用的证书文件
+/archive/**/*.crt
+/archive/**/*.key
+/archive/**/*.csr
+/archive/**/*.pem

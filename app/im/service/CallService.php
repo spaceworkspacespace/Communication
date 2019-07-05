@@ -22,7 +22,7 @@ class CallService implements ICallService {
         
         $callDetailField = RedisModel::getKeyName("cache_calling_communication_info_hash_key");
         $callingUserIdList =RedisModel::getKeyName("im_calling_id_list_key") ;
-        $callingUserIdHash = RedisModel::getKeyName("im_calling_comm_group_hash");
+        $callingUserIdHash = RedisModel::getKeyName("calling_h");
         
         $cache = Cache::store("redis");
         
@@ -77,7 +77,8 @@ class CallService implements ICallService {
             // 避免与 GatewayWokerman 那边冲突, 加锁.
             if (!$cache->lock($callingUserIdList)
                 || !$cache->lock($callingUserIdHash)) {
-               return false;
+                im_log("error", implode(" ", "锁失败", $callingUserIdList, $callingUserIdHash));
+                return false;
             }
             RedisModel::lrem($callingUserIdList, $data["userid"]);
             RedisModel::lrem($callingUserIdList, $data["ruserid"]);
@@ -137,12 +138,15 @@ class CallService implements ICallService {
             && $pushType === IGatewayService::COMMUNICATION_EXCHANGE_TYPE) {
             throw new OperationFailureException(lang("don't repeated connect"));
         } else if ($pushType === IGatewayService::COMMUNICATION_EXCHANGE_TYPE) {
+            // im_log("notice", implode(" ", ["设置用户信息", $callUserField, $userId2]));
             // 设置用户信息
-            RedisModel::hsetJson($callUserField, $userId2, [
+            $userFieldData = [
                 "sign"=>$sign,
                 "ctype"=>$chatDetail["ctype"],
                 "createTime"=>$now
-            ]);
+            ];
+            RedisModel::hsetJson($callUserField, $userId2, $userFieldData);
+            RedisModel::hsetJson(RedisModel::getKeyName("user_h", ["userId"=>$userId2]), $userId, $userFieldData);
         }
         println("建立通话 推送类型: ", $pushType, " 推送数据: ", $data, " ", $userId, " 推送到: ", $userId2);
         // 推送
@@ -411,13 +415,17 @@ class CallService implements ICallService {
          */
         $data = [];
         $callGroupField = RedisModel::getKeyName("im_calling_comm_group_hash", ["groupId"=>$groupId]);
+        $callUserField = RedisModel::getKeyName("im_calling_comm_user_hash", ["userId"=>$userId]);
         $onlineIdsSetField = RedisModel::getKeyName("cache_chat_online_user_key");
         $groupsModel = model("groups");
         $cache = Cache::store("redis");
         $now = time();
         
         // 锁
-        if (!$cache->lock($callGroupField)) {
+        if (!$cache->lock($callGroupField) ||
+            !$cache->lock($callUserField)) {
+            $cache->unlock($callGroupField);
+            $cache->unlock($callUserField);
             throw new OperationFailureException(lang("server busy"));
         }
         
@@ -432,17 +440,22 @@ class CallService implements ICallService {
         // 储存会话信息
         $data = $this->setCallDetail(["sign"=> $sign, "userId"=>$userId, "groupId"=>$groupId, "ctype"=>$ctype]);
         println("群聊创建 ", $data);
-        RedisModel::hsetJson($callGroupField, "g", [
+        $g = [
             "sign"=>$sign,
             "id"=> $data["groupid"],
             "name"=>$data["groupname"],
             "avatar"=>$data["groupavatar"]
-        ]);
+        ];
+        RedisModel::hsetJson($callGroupField, "g", $g);
         // 加入聊天
         RedisModel::hsetJson($callGroupField, $userId, ["joinTime"=>$now]);
         
+        // 加入群聊信息
+        RedisModel::hsetJson($callUserField, "g", $g);
+        
         // 解锁
         $cache->unlock($callGroupField);
+        $cache->unlock($callUserField);
         
         // 过滤掉自己的 id 和不可用的 id
         $filterId = function_curry('array_filter', 2)(F_P_, 
@@ -543,6 +556,9 @@ class CallService implements ICallService {
         array_for_each($userIds, function($value) use ($userId, $sign) {
             $this->establish($userId, $value, $sign);
         });
+        
+        // 填充群聊信息
+        RedisModel::hsetJson($callUserField, "g", $g);
         
         // 解锁
         $cache->unlock($callUserField);

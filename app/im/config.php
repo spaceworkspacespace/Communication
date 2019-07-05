@@ -21,6 +21,13 @@ return [
     ],
     // 程序的一些配置.
     "im" => [
+        // ICE 配置
+        "iceserver"=> [
+            "iceServers"=> [
+                [ "urls" => "turn:im.5dx.ink:3478"],
+            ]
+        ],
+        
         // 用于缓存中的命名
         "cache_chat_last_send_time_key"=>"im_chat_last_send_time_hash", // 保存消息重发的消息详情
         "cache_chat_resend_list_key"=>"im_chat_resend_list", // 排列需要重发的消息
@@ -35,6 +42,14 @@ return [
         "cache_calling_communication_info_hash_key" => "im_chat_calling_communication_info_hash", // 会话的详情数据
         "im_calling_comm_user_hash"=>"im_call_calling_user_{userId}_hash", // 会话的用户信息
         "im_calling_comm_group_hash"=>"im_call_calling_gruop_{groupId}_hash", // 会话的群聊 id
+        
+        "redis_keys"=>[
+            "user_h"=>"im_call_calling_user_{userId}_hash",
+            "group_h"=> "im_call_calling_gruop_{groupId}_hash",
+            "detail_h"=>"im_chat_calling_communication_info_hash",
+            "calling_l"=>"im_calling_id_list",
+            "calling_h"=>"im_calling_idtime_hash",
+        ]
     ],
 //     ,
     'cache'                  => [
@@ -61,8 +76,8 @@ return [
         ],
         "redis"=> [
             "type"=>"\\app\\im\\util\\RedisCacheDriverImpl",
-            "host"       => '127.0.0.1'
-            //             "host"=>getenv("REDIS_HOST")
+            // "host"       => '127.0.0.1'
+            "host"=>APP_DEBUG? getenv("REDIS_HOST"): "127.0.0.1",
         ]
     ],
 ];
