@@ -7,7 +7,6 @@ import { IMCallBack } from '../service/IMCallBack';
 
 import '@/style/mobile.css'
 import { SOCKET } from '../conf/link';
-import { ChatService } from '../service/ChatService';
 import { LINKS } from '../conf/link';
 import Axios from 'axios';
 

@@ -8,6 +8,7 @@ import { ChatService } from './ChatService';
 import { MessageService } from './MessageService';
 import { App } from '../App';
 import { ICallHandler } from '../util/ICallHandler';
+import { CallService } from './CallService';
 
 // 消息发送的间隔时间
 const MESSAGE_SEND_INTERVAL = 1500;
@@ -117,7 +118,7 @@ class IMCallBack {
                 // 长按显示删除tips;
                 chatInfoContent.on({
                     touchstart: function (e) {
-                        timeOutEvent = setTimeout(function () {
+                        timeOutEvent = window.setTimeout(function () {
                             // 此处为长按事件-----在此显示删除按钮
                             // console.log("长按了。。。");
                             mytips.show();
@@ -207,7 +208,7 @@ class IMCallBack {
                 // 长按显示删除tips;
                 chatInfoContent.on({
                     touchstart: function (e) {
-                        timeOutEvent = setTimeout(function () {
+                        timeOutEvent = window.setTimeout(function () {
                             // 此处为长按事件-----在此显示删除按钮
                             // console.log("长按了。。。");
                             mytips.show();
@@ -334,10 +335,17 @@ class IMCallBack {
 
             await MessageService.getInstance()
                 .pull(this.user.id);
+            layer.msg("连接成功");
+            console.log("连接成功")
         } catch (e) {
-            errMsg(e);
+            // errMsg(e);
+            layer.alert(e.message, {
+                shadeClose: false,
+                closeBtn: 0
+            }, index => {
+                window.location.href = "/";
+            });
         }
-        layer.msg("连接成功");
     }
 
     public onReconnection() {
@@ -432,13 +440,56 @@ class IMCallBack {
         console.log("新的命令: ", type, data)
         switch (type) {
             case GatewayMessage.COMMUNICATION_ASK:
+                // let rawData = JSON.parse(event.data);
                 this.callHandler.onRequest(data);
+                // .then(r => {
+                //     CallService.getInstance()
+                //     .requestCall(null, )
+                //     CallService.getInstance()
+                //         .requestReply(data.sign, r)
+                //         .catch(e => {
+                //             console.log(e);
+                //             layer.msg(e.message);
+                //         });
+                // });
                 break;
             case GatewayMessage.COMMUNICATION_EXCHANGE:
+                // 群聊的 sign 特殊处理一下, 保证唯一性
+                // if (data.groupid != null) {
+                //     data.sign = data.sign + "_for_" + data.userid;
+                // }
                 this.callHandler.onRequestDescription(data);
                 break;
             case GatewayMessage.COMMUNICATION_COMMAND:
-                this.callHandler.onResponseDescription(data);
+                try {
+                    // 群聊的 sign 特殊处理一下, 保证唯一性
+                    // if (data.groupid != null) {
+                    //     data.sign = data.sign + "_for_" + data.userid;
+                    // }
+                    data.description = JSON.parse(window.atob(data.description));
+                    this.callHandler.onResponseDescription(data);
+                } catch (e) {
+                    console.error(e);
+                    layer.msg(e.message);
+                }
+                break;
+            case GatewayMessage.COMMUNICATION_EXCHANGE_ICE:
+                try {
+                    // 群聊的 sign 特殊处理一下, 保证唯一性
+                    // if (data.groupid != null) {
+                    //     data.sign = data.sign + "_for_" + data.userid;
+                    // }
+                    data.candidate = JSON.parse(window.atob(data.ice));
+                    this.callHandler.onResponseCandidate(data);
+                } catch (e) {
+                    console.error(e);
+                    layer.msg(e.message);
+                }
+                break;
+            case GatewayMessage.COMMUNICATION_RECONNECT:
+                break;
+            case GatewayMessage.COMMUNICATION_FINISH:
+                this.callHandler.onFinish(data);
                 break;
             case GatewayMessage.REMOVE_FRIEND:
                 // console.log("删除好友", data);
@@ -457,6 +508,10 @@ class IMCallBack {
                         id: group.id
                     });
                 }
+                break;
+
+            default:
+                console.warn("未识别推送消息: ", type);
                 break;
         }
     }

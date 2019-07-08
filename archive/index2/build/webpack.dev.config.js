@@ -21,6 +21,7 @@ module.exports = merge(baseConfig, {
         port: 9510,
         contentBase: path.join(__dirname, '../dist'),
         hot: true,
+        disableHostCheck: true,
     },
     optimization: {
         minimizer: [

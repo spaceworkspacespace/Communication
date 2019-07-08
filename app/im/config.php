@@ -24,7 +24,9 @@ return [
         // ICE 配置
         "iceserver"=> [
             "iceServers"=> [
-                [ "urls" => "turn:im.5dx.ink:3478"],
+                // [ "urls" => "stun:im.5dx.ink:3479"],
+                [ "urls" => "stun:stun1.l.google.com:19302"],
+                // [ "urls" => "turn:im.5dx.ink:3478"],
             ]
         ],
         

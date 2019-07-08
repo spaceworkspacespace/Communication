@@ -121,6 +121,10 @@ class MessageHandler
             im_log("error", "未找到 uid, clientId ", $client_id, ", uid ", $userId);
         }
        $cache = Factory::getReidsModel();
+       // 不存在, 服务器还没收到客户端的连接完成请求之前客户端就开始 ping 了
+       if (!$cache->hexists($callingIdTimeHash, $userId)) {
+           return;
+       }
         try {
             if (!$cache->lock($callingIdTimeHash)) {
                 throw new OperationFailureException("lock 失败. $callingIdTimeHash");

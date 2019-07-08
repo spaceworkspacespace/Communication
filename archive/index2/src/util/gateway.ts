@@ -36,9 +36,11 @@ namespace GatewayMessage {
     export const ONLINE = "ONLINE";
     export const COMMUNICATION_ASK = "COMMUNICATION-ASK";
     export const COMMUNICATION_EXCHANGE = "COMMUNICATION-EXCHANGE";
+    export const COMMUNICATION_EXCHANGE_ICE = "COMMUNICATION-ICE";
     export const COMMUNICATION_COMMAND = "COMMUNICATION-COMMAND";
     export const COMMUNICATION_MEMBER = "COMMUNICATION-MEMBER";
     export const COMMUNICATION_FINISH = "COMMUNICATION-FINISH";
+    export const COMMUNICATION_RECONNECT = "COMMUNICATION-RECONNECT";
 
     export type MessageType = Send | Ask | Update | Connected | Add;
 
@@ -53,22 +55,6 @@ namespace GatewayMessage {
         data: {
             [key: string]: string // 对应的 keyId: key 的键值对.
         }
-    }
-
-    export interface CallAskMessagePayload {
-        sign: string, // 通信的标识
-        ctype: "video" | "voice", // 通信的类型
-        userid: number, // 请求者的 id
-        username: string, // 请求者的名称
-        useravatar: string, // 请求者的名称
-        // 如果是来自群聊的通信, 补充下列信息
-        groupid?: number, // 群聊的 id
-        groupname?: string, // 群聊的名称
-        groupavatar?: string, // 群聊的图像
-        // 接收者信息
-        ruserid: number, // 接收者的 id,
-        rusername: string,
-        ruseravatar: string,
     }
 }
 
@@ -225,7 +211,7 @@ class GatewayImpl implements IGateway, IIM {
                 _connection();
             });
             this._initSocket();
-            this.onopen(new CustomEvent("open"));
+            this.onopen && this.onopen(new CustomEvent("open"));
         }
         return null;
     }

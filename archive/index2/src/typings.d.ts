@@ -1,5 +1,6 @@
 declare module "showdown";
 declare module "chart.js";
+declare module "adapterjs";
 
 declare module 'layer' {
     interface OptionForPageLayer extends BasicOptions {
@@ -80,8 +81,13 @@ declare module 'layer' {
     type Options = OptionForTipsLayer | OptionForLoadingLayer | OptionForIframeLayer | OptionForPageLayer;
 
     interface Layer {
+        alert(content: string): void;
+        alert(content: string, options: BasicOptions): void;
+        alert(content: string, yes: (index: number) => void): void;
+        alert(content: string, options: BasicOptions, yes: (index: number) => void): void;
         close(index: number): void;
         config(options: BasicOptions): void;
+        confirm(content: string, options: BasicOptions, yes: (index: number) => void, cancel: () => void): number;
         msg(msg: string, options?: BasicOptions, onclose?: () => {}): number;
         open(options: Options): number;
     }
@@ -315,6 +321,26 @@ declare namespace MessageData {
         groupname: string,
         id: number,
     }>
+
+    export type CommunicationMessageData = {
+        sign: string, // 通信的标识
+        ctype: "video" | "voice", // 通信的类型
+        communicatetime?: number, // 通话时间
+        ice?: string,
+        description?: string, // 对方的描述信息
+        // 用户信息
+        userid: number, // 请求者的 id
+        username: string, // 请求者的名称
+        useravatar: string, // 请求者的名称
+        // 如果是来自群聊的通信, 补充下列信息
+        groupid?: number, // 群聊的 id
+        groupname?: string, // 群聊的名称
+        groupavatar?: string, // 群聊的图像
+        // 接收者信息
+        ruserid: number, // 接收者的 id,
+        rusername: string,
+        ruseravatar: string,
+    }
 }
 
 declare namespace RespData {
@@ -409,4 +435,15 @@ declare namespace RespData {
         msg: string;
         data: any;
     }
+}
+
+declare namespace Beans {
+    export type ChatType = "friend" | "group";
+}
+
+declare namespace Type {
+    export type Runnable = () => void;
+    export type Function<T, R> = (arg: T) => R;
+    export type Consumer<T> = (arg: T) => void;
+    export type BiConsumer<T, U> = (t: T, u: U) => void;
 }

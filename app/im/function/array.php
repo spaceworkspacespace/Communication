@@ -86,6 +86,23 @@ function array_flatten($array) {
 }
 
 /**
+ * 获取索引值或返回默认值
+ * @param array $array
+ * @param string|int $key 索引
+ * @param mixed $default 默认值
+ */
+function array_get_or_else(array $array, $key, $default=null) {
+    $result = null;
+    if (array_key_exists($key, $array)) {
+        $result = $array[$key];
+    }
+    if (is_null($result)) {
+        return $default;
+    }
+    return $result;
+}
+
+/**
  * 替换数组中的键名, 键名可以是数字或字符串. 方法会改变原数组.
  * @param array $ary 操作的数组
  * @param mixed $old 旧的键名, 可以是数组 [ 新键名=> 旧键名 ...], 进行批量替换
@@ -334,4 +351,26 @@ function array_select(array $array, $closures, $null_valid=true, $defaultValue=n
         $result = $defaultValue;
     }
     return $result;
+}
+
+/**
+ * 迭代所有元素, 如果回调应用在任一元素上返回值为 true, 则结果为 true, 否则 false.
+ * @param array $array
+ * @param string|\Closure $predicate (value, index, array)
+ * @return boolean
+ */
+function array_some(array $array, $predicate) {
+    $result = false;
+    foreach ($array as $key => $value) {
+        if (is_string($predicate)) {
+            $result = call_user_func($predicate, $value, $key, $array);
+        } else {
+            $result = $predicate($value, $key, $array);
+        }
+        // 只要有一个返回结果为 true, 立即结束循环
+        if ($result) {
+            break;
+        }
+    }
+    return (boolean) $result;
 }

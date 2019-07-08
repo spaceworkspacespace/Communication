@@ -8,8 +8,10 @@ import layer from 'layer'
 // import * as $ from 'jquery'
 import { App } from './App';
 
+axios.defaults.baseURL = "https://im.5dx.ink"
 // axios.defaults.baseURL = "http://192.168.0.218:1212"
 // axios.defaults.baseURL = "http://127.0.0.1:9510"
+// axios.defaults.baseURL = "http://chat.pybycl.com:1235";
 // axios.defaults.baseURL = "http://192.168.0.80:1235";
 axios.defaults.withCredentials = true;
 axios.defaults.params = {

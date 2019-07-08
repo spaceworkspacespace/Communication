@@ -757,6 +757,9 @@ class ChatService implements IChatService
             $userService = SingletonServiceFactory::getUserService();
             $callService = SingletonServiceFactory::getCallService();
             
+            $this->resumeCall(["userId"=>$userId]);
+            $this->resumeCall(["userId"=>$userId2]);
+            
             // 判断用户是否在线
             // 当前呼叫者离线了.
             if ( ! $userService->isOnline($userId)) {
@@ -785,6 +788,8 @@ class ChatService implements IChatService
     public function requestCallWithGroup($userId, $groupId, $callType)
     {
         try {
+            $this->resumeCall(["userId"=>$userId, "groupId"=> $groupId]);
+            
             $callService = SingletonServiceFactory::getCallService();
             $userService = SingletonServiceFactory::getUserService();
             $userModel = ModelFactory::getUserModel();
@@ -921,5 +926,60 @@ class ChatService implements IChatService
             im_log("error", $e);
             throw new OperationFailureException();
         }
+    }
+    
+    /**
+     * 修正用户通话的状态
+     * @args { userId: number, groupId?: number, sign?: string }
+     * @return boolean
+     * @var \app\im\util\RedisCacheDriverImpl $cache
+     */
+    protected function resumeCall($args) {
+        /**
+         * 
+         */
+        $userId = $args["userId"];
+        $groupId = array_get_or_else($args, "groupId");
+        $sign = array_get_or_else($args, "sign");
+        
+        $gHash = RedisModel::getKeyName("group_h", $args);
+        $uHash = RedisModel::getKeyName("user_h", $args);
+        $cHash = RedisModel::getKeyName("calling_h");
+        $cList = RedisModel::getKeyName("calling_l");
+        
+        $cache = Cache::store("redis");
+        try {
+            if (RedisModel::exists($uHash)) {
+                if (!$cache->lockAll([$uHash, $cList, $cHash])) {
+                    return false;
+                }
+                if (array_some(RedisModel::hgetallJson($uHash), function($value, $key) {
+                    return is_numeric($key);
+                })) {
+                    // 通话状态掉了
+                    if (!RedisModel::hexists($cHash, $userId)) {
+                        $cache->hsetJson($cHash, $userId, [
+                            "timestamp"=>time(),
+                            "losecount"=>0,
+                        ]);
+                    }
+                    $us = RedisModel::lrange($cList);
+                    if (!array_search($userId, RedisModel::lrange($cList))) {
+                        $cache->lpush($cList, $userId);
+                    }
+                } else {
+                    // 通话已经结束了, 解除通话状态
+                    $cache->hdel($cHash, $userId);
+                    $cache->lrem($cList, $userId);
+                }
+                // 解锁
+                $cache->unlockAll([$uHash, $cList, $cHash]);
+            }
+            
+        } finally {
+            // 报错就不太好了.
+            $cache->unlockAll([$uHash, $cList, $cHash, $gHash]);
+        }
+        
     }
 }

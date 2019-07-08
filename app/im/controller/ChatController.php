@@ -77,7 +77,10 @@ class ChatController extends Controller{
         // var_dump($user);
         $iceConfig = config("im.iceserver");
         $iceConfig["iceServers"] = array_map_with_index($iceConfig["iceServers"], function($value) use($user) {
-            return array_merge($value, ["username"=>$user["user_nickname"], "credential"=>""]);
+            if (str_starts_with($value["urls"], "turn")) {
+                return array_merge($value, ["username"=>$user["user_nickname"], "credential"=>""]);
+            }
+            return $value;
         });
         $this->error("", "/", $iceConfig, 0);
     }

@@ -70,6 +70,23 @@ trait TRedisLock {
             
             return false;
     }
+
+    public function lockAll(array $names, $timeout = 5, $expire = 15, $waitIntervalUs = 100000) {
+        $locked = [];
+        foreach ($names as $name) {
+            // 加锁失败
+            if (!$this->lock($name, $timeout, $expire, $waitIntervalUs)) {
+                break;
+            }
+            array_push($locked, $name);
+        }
+        // 解除已加锁返回 false
+        if (count ($locked) !== count ($names)) {
+            $this->unlockAll($locked);
+            return false;
+        }
+        return true;
+    }
     
     /**
      * 释放锁
@@ -86,5 +103,11 @@ trait TRedisLock {
             }
         }
         return false;
+    }
+    
+    public function unlockAll(array $names) {
+        foreach ($names as $name) {
+            $this->unlock($name);
+        }
     }
 }

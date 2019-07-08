@@ -1,4 +1,22 @@
 <?php
+
+/**
+ * 判断字符串是否以指定字串开始.
+ * @param string $str
+ * @param string $prefix
+ * @param int $offset
+ * @return boolean
+ */
+function str_starts_with(string $str, string $prefix, int $offset=0) {
+    if ($offset > 0) {
+        $str = substr($str, $offset);
+    }
+    if (preg_match("/^$prefix/", $str)) {
+        return true;
+    }
+    return false;
+}
+
 /**
  * 将模板字符串中的 {name} 替换为指定内容
  * @param string $str 字符串

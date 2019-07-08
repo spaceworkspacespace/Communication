@@ -128,6 +128,12 @@ class RedisModel
         return $cache->rawCommand("LPUSH", $key, $value);
     }
     
+    public static function lrange($key, $start=0, $stop=null, $cache = null) {
+        if (is_null($cache)) $cache = static::getRedis();
+        if (is_null($stop)) $stop = static::llen($key);
+        return $cache->rawCommand("LRANGE", $key, $start, $stop);
+    }
+    
     public static function lrem($key, $value, $count=1, $cache = null) {
         if ($cache === null) $cache = static::getRedis();
         return $cache->rawCommand("LREM", $key, $count, $value);

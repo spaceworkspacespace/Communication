@@ -48,6 +48,11 @@ class IntervalService implements  IIntervalService {
                     $fristId, ";", 
                     $callingIdTimeHash, 
                     $cache->hgetJson($callingIdTimeHash, $fristId)]));
+                // 删除
+                if ($cache->lock($callingIdList)) {
+                    $cache->lrem($callingIdList, $fristId);
+                }
+                $cache->unlock($callingIdList);
                 throw new OperationFailureException();
             }
             
