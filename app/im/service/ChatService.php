@@ -636,11 +636,20 @@ class ChatService implements IChatService
         }
     }
     
+    /**
+     * 
+     * @var \app\im\util\RedisCacheDriverImpl $cache
+     * @param string $sign
+     * @param int $userId
+     * @param int $userId2
+     * @param string $connectId
+     * @throws OperationFailureException
+     */
     public function requestCallReconnection($sign, $userId, $userId2, $connectId=null) {
         $userKey = RedisModel::getKeyName("user_h", ["userId"=>$userId]);
         $userKey2 = RedisModel::getKeyName("user_h", ["userId"=>$userId2]);
         
-        $detail = RedisModel::hget(RedisModel::getKeyName("detail_h"), $sign);
+        $detail = RedisModel::hgetJson(RedisModel::getKeyName("detail_h"), $sign);
         
         if (!is_array($detail)) {
             throw new OperationFailureException(lang("the call doesn't exist"));
@@ -684,7 +693,8 @@ class ChatService implements IChatService
         
         $cache = Cache::store("redis");
         try {
-            if ($cache->lock($userKey) || $cache->lock($userKey2)) {
+            if (!$cache->lock($userKey) 
+                || !$cache->lock($userKey2)) {
                 throw new OperationFailureException(lang('server busy'));
             }
             
@@ -692,8 +702,12 @@ class ChatService implements IChatService
             $userCallInfo2 = RedisModel::hgetJson($userKey2, $userId);
             if (isset($userCallInfo2["connectid"]) 
                 && (string)$userCallInfo2["connectid"] === "$connectId") {
+                // 清除彼此信息, 表示双方尚未建立连接
+                $cache->hdel($userKey, $userId2);
+                $cache->hdel($userKey2, $userId);
+                $cache->unlockAll([$userKey, $userKey2]);
+                // 建立连接
                 $callService = SingletonServiceFactory::getCallService();
-                // RedisModel::hdel();
                 $callService->establish($userId, $userId2, $sign);
             } else {
                 $userCallInfo = RedisModel::hgetJson($userKey, $userId2);

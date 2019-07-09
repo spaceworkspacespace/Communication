@@ -151,14 +151,14 @@ class ChatController extends Controller{
         }
     }
     
-    public function postCallReconnect($sign, $userId) {
+    public function postCallReconnect($sign, $userId, $connectid) {
         $reMsg = "";
         $reData = null;
         $failure = false;
         
-        $callService = SingletonServiceFactory::getCallService();
+        $chatService = SingletonServiceFactory::getChatService();
         try {
-            $callService->requestCallReconnection(cmf_get_current_user_id(), $userId, $sign);
+            $chatService->requestCallReconnection($sign, cmf_get_current_user_id(), $userId, $connectid);
         } catch (OperationFailureException $e) {
             $failure = true;
             $reMsg = $e->getMessage();
@@ -219,7 +219,7 @@ class ChatController extends Controller{
                         break;
                     case "finish": // 通话完成
                         if($error){
-                            im_log("notice", "通话完成, 但发生了错误.", $errmsg);
+                            im_log("notice", "通话完成, 但发生了错误: ", $errmsg);
                         }
                         $chatService->requestCallFinish($this->userId, $sign, $error);
                         break;

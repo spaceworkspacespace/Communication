@@ -60,7 +60,8 @@ class CallService implements ICallService {
                 println("断开 ", $userId, " 和 ", $otherIds, " 的连接");
                 // 断开当前用户与群聊其他用户的通话
                 array_for_each($otherIds, function($otherId) use ($userId) {
-                    RedisModel::hdel($otherId, $userId);
+                    $uHash2 = RedisModel::getKeyName("im_calling_comm_user_hash", ["userId"=>$otherId]);
+                    RedisModel::hdel($uHash2, $userId);
                 });
                 // 清除自己在群聊中的信息
                RedisModel::hdel($callGroupField, $userId);
