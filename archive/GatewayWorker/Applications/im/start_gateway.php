@@ -23,10 +23,10 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 // gateway 进程，这里使用Text协议，可以用telnet测试
 $context = [
     'ssl' => [
-        'local_cert' => __DIR__ . "/2285556_im.5dx.ink.crt",
-        'local_pk' => __DIR__ . "/2285556_im.5dx.ink.key",
-        'verify_peer' => false
-        // 'allow_self_signed'=>true
+        'local_cert' => config("gateway.cert"),
+        'local_pk' =>config("gateway.pk"),
+        'verify_peer' => false,
+        'allow_self_signed'=>true
     ]
 ];
 

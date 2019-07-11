@@ -29,7 +29,9 @@ return [
     "gateway" => [
         "register_host" => "0.0.0.0",
         "register_port" => "1238",
-        "ws_port" => 8080
+        "ws_port" => 8080,
+        "cert"=>__DIR__ . "/conf/chat.pybycl.com.crt",
+        "pk"=>__DIR__ . "/conf/chat.pybycl.com.key"
     ],
     "redis" => [
         "host" => CONTAINERIZATION? getenv("REDIS_HOST"): "127.0.0.1",
