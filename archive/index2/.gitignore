@@ -1,8 +1,0 @@
-/lwp.zip
-/test.*
-
-/dist
-/node_modules
-/package-lock.json
-!/dist/layim-v3.8.0/src/lay/modules/layim.js
-!/dist/layim-v3.8.0/src/lay/modules/mobile/layim-mobile.js

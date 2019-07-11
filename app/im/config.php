@@ -81,7 +81,7 @@ return [
         "redis"=> [
             "type"=>"\\app\\im\\util\\RedisCacheDriverImpl",
             // "host"       => '127.0.0.1'
-            "host"=>APP_DEBUG? getenv("REDIS_HOST"): "127.0.0.1",
+            "host"=>CONTAINERIZATION? getenv("REDIS_HOST"): "127.0.0.1",
         ]
     ],
 ];
