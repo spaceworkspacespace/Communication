@@ -50,9 +50,8 @@ class UserService implements IUserService {
     
     public function isOnline($userId): bool
     {
-        $cache = RedisModel::getRedis();
-        if ($cache->rawCommand("SISMEMBER", config("im.cache_chat_online_user_key"), $userId) 
-            !== 0) {
+        if (is_numeric($userId) 
+            && RedisModel::sismember(config("im.cache_chat_online_user_key"), $userId)) {
             return true;
         } else {
             return false;

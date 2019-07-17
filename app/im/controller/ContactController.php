@@ -290,16 +290,24 @@ class ContactController extends Controller
      * 查询联系人
      */
     public function getFriend($keyword = null, $id = null, $no = 1, $count = 10) {
+        $reData = null;
+        // $reMsg = "";
         try {
-            $res = SingletonServiceFactory::getContactService()->getFriend($keyword, $id, $no, $count);
-            foreach($res as &$u) {
-                $u["status"] = SingletonServiceFactory::getUserService()->isOnline($u["id"]);
+            // 查询自己的联系人
+            if (!is_string($keyword) || !is_numeric($id) || strlen($keyword) === 0) {
+                $reData = SingletonServiceFactory::getContactService()->getFriendsForUser(Db::connect(),cmf_get_current_user_id());
+            } else {
+                $reData = SingletonServiceFactory::getContactService()->getFriend($keyword, $id, $no, $count);
+            }
+            
+            foreach($reData as &$u) {
+                $u["status"] = SingletonServiceFactory::getUserService()->isOnline($u["id"])? "online": "offline";
             }
         } catch (\Exception $e) {
             im_log("error", $e);
             $this->success('查询失败', '/', $e->getMessage(), 0);
         }
-        $this->error('查询成功', '/', $res, 0);
+        $this->error('查询成功', '/', $reData, 0);
     }
     
     /**

@@ -1,6 +1,8 @@
 <?php
 namespace app\im\model;
 
+use think\db\Query;
+
 interface IFriendModel {
     
     /**
@@ -84,6 +86,13 @@ interface IFriendModel {
      * @return boolean 是否为好友关系 true 是, false 否
      */
     public function isFriend($userId, $userId2) ;
+    
+    /**
+     * 获取用户的好友信息
+     * @param Query $db
+     * @param int $userId
+     */
+    public function getUserFrinds($db, $userId) ;
     
     /**
      * 将两个用户互相设为好友

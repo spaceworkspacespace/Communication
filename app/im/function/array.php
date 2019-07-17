@@ -85,6 +85,61 @@ function array_flatten($array) {
     }, []);
 }
 
+function array_get(array $array, $queryPath, $default = null) {
+    if (!is_array($array) || count($array) === 0) {
+        return $default;
+    }
+    
+    $path = null;
+    // 确定查询路径
+    if (is_string($queryPath)) {
+        $path = explode(".", $queryPath);
+    } else if (is_array($queryPath)) {
+        $path = $queryPath;
+    } else {
+        return $default;
+    }
+    
+    $gather = $array;
+    foreach($path as $p) {
+        if (isset($gather[$p])) {
+            $gather = $gather[$p];
+        } else {
+            $gather = $default;
+            break;
+        }
+    }
+    return $gather;
+}
+
+/**
+ * 从多个数组中查询某个属性, 返回组成的新数组.
+ * array_get_from("a", {a: 1}, {a: 2, b: 3}) => [1, 2]
+ * @param string | array $queryPath
+ * @param array ...$sources
+ * @return array
+ */
+function array_get_from($queryPath, ...$sources) {
+    
+}
+
+/**
+ * 从多个数组中查询某个属性, 返回第一个取值为 truly 的值. (布尔性质为 true)
+ * array_get_from("a", {b: 1}, {a: 2, b: 3}) => b
+ * @param string | array $queryPath
+ * @param array ...$sources
+ * @return mixed 如果没有为 truly 的值, 最终返回 null.
+ */
+function array_get_one_from($queryPath, ...$sources) {
+    foreach ($sources as $source) {
+        $value = array_get($source, $queryPath);
+        if ($value) {
+            return $value;
+        }
+    }
+    return null;
+}
+
 /**
  * 获取索引值或返回默认值
  * @param array $array
@@ -100,6 +155,30 @@ function array_get_or_else(array $array, $key, $default=null) {
         return $default;
     }
     return $result;
+}
+
+function array_has($array, $queryPath) {
+    if (!is_array($array) || count($array) === 0) {
+        return false;
+    }
+    
+    $path = null;
+    // 确定查询路径
+    if (is_string($queryPath)) {
+        $path = explode(".", $queryPath);
+    } else if (is_array($queryPath)) {
+        $path = $queryPath;
+    } else {
+        return false;
+    }
+    
+    $gather = $array;
+    foreach($path as $p) {
+        if (!isset($gather[$p])) {
+            return false;
+        } 
+    }
+    return true;
 }
 
 /**

@@ -1,6 +1,10 @@
 <?php
 namespace app\im\service;
 
+use app\im\exception\OperationFailureException;
+use think\Db;
+use think\db\Query;
+
 interface IContactService {
     
     /**
@@ -72,6 +76,25 @@ interface IContactService {
     public function deleteGroupMember($userId, $gid, $uid);
     
     /**
+     * 查询联系人
+     * @param string $keyword 关键字
+     * @param int $id 联系人id
+     * @param int $no 页码
+     * @param int $count 每页显示行数
+     */
+    public function getFriend($keyword, $id, $no, $count) ;
+    
+    
+    /**
+     * 查询特定用户的联系人列表
+     * @param Query $db 数据库连接对象
+     * @param mixed $userId
+     * @return array 联系人列表
+     * @throws OperationFailureException 操作失败
+     */
+    public function getFriendsForUser($db, $userId): array;
+    
+    /**
      * 获取用户的联系人以及分组
      * @param mixed $userId
      * @return array
@@ -135,15 +158,6 @@ interface IContactService {
      * @return mixed 修改后的成员信息
      */
     public function updateGroupMember($uid, $gid, $member) ;
-    
-    /**
-     * 查询联系人
-     * @param string $keyword 关键字
-     * @param int $id 联系人id
-     * @param int $no 页码
-     * @param int $count 每页显示行数
-     */
-    public function getFriend($keyword, $id, $no, $count) ;
     
     /**
      * 退出群聊

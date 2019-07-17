@@ -414,6 +414,16 @@ class ContactService implements IContactService {
         return $data;
     }
     
+    public function getFriendsForUser($db, $userId): array {
+        $friends = ModelFactory::getFriendModel()->getUserFrinds($db, $userId);
+        return $this->mapUserProps($friends, [
+            "signature"=>" ",
+            "avatar"=>"https://i.loli.net/2019/04/12/5cafffdaed88f.jpg",
+            "sex"=>0,
+            "user_nickname"=>"未命名"
+        ]);
+    }
+    
     public function getGroupByCondition($condition, $pageNo=1, $pageSize=50): array {
         try {
             return model("group")->getQuery()
@@ -595,6 +605,25 @@ class ContactService implements IContactService {
             im_log("error", "消息插入失败 !", $e);
             throw new OperationFailureException("消息发送失败 !");
         }
+    }
+    
+    public function mapUserProps($users, $defaultProps = null) {
+        if (!is_array($users)) {
+            return [];
+        }
+        
+        $getProp = function_curry("array_get_one_from", 3)(F_P_, F_P_, $defaultProps);
+        return array_map_with_index($users, function($value, $index) use ($getProp) {
+            $sexNo = array_get($value, "sex");
+            
+            return [
+                "id"=>$getProp("id", $value),
+                "avatar" =>$getProp("avatar", $value),
+                "username" =>$getProp("user_nickname", $value),
+                "sex" => $sexNo!== 1? ($sexNo !== 2? "保密":"女"):"男",
+                "sign"=>$getProp("signature", $value),
+            ];
+        });
     }
     
     /**

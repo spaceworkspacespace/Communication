@@ -5,6 +5,7 @@ namespace app\im\model;
 use app\im\exception\OperationFailureException;
 use app\im\service\SingletonServiceFactory;
 use think\Db;
+use think\db\Query;
 
 class FriendsModel extends IMModel implements IFriendModel {
     
@@ -363,6 +364,24 @@ SQL;
             return [];
         }
         return $resultSet[0];
+    }
+    
+    /**
+     * @param Query $db
+     * {@inheritDoc}
+     * @see \app\im\model\IFriendModel::getUserFrinds()
+     */
+    public function getUserFrinds($db, $userId) {
+        return $db->table("im_friends")
+            ->alias("f")
+            ->join("cmf_user u", "u.id = f.contact_id")
+            ->where("f.user_id=:uid")
+            ->bind([
+                "uid"=>[$userId, \PDO::PARAM_INT]
+            ])
+            ->field("u.id AS id, sex, avatar, f.contact_alias AS user_nickname, u.signature")
+            ->select()
+            ->toArray();
     }
     
     public function isFriend($userId, $userId2) {
