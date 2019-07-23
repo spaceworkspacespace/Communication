@@ -355,11 +355,7 @@ class ContactController extends Controller
         } 
     }
     
-    /**
-     * 查询群聊成员
-     * @param mixed $id 群聊的 id
-     */
-    public function getGroupMember($id){
+    public function getGroupMemberForLayim($id){
         $groupId = $this->request->get('id');
         
         $group = new GroupModel();
@@ -386,6 +382,28 @@ class ContactController extends Controller
         ];
         
         $this->error("", "/", $data, 0);
+    }
+    
+    /**
+     * 查询群聊成员
+     * @param mixed $id 群聊的 id
+     */
+//     public function getGroupMember($id){
+//         $groupId = $this->request->get('id');
+        
+//         $groups = new GroupsModel();
+//         $list = $groups->alias('g')
+//             ->field("u.id,  CASE u.avatar  WHEN '' THEN 'https://i.loli.net/2018/12/10/5c0de4003a282.png' END AS avatar, u.signature AS sign, u.user_nickname AS username")
+//             ->where(['g.contact_id'=>$groupId])
+//             ->join(["cmf_user"=> "u"],'u.id = g.user_id')
+//             ->select()
+//             ->toArray();
+        
+//         $this->error("", "/", $list, 0);
+//     }
+    
+    public function getGroupMember($id){
+        return $this->getGroupMemberForLayim($id);
     }
 
     /**

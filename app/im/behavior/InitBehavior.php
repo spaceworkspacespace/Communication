@@ -159,11 +159,9 @@ class InitBehavior {
 
     public static function checkJwt(){
         $jwt = new Jwt();
-        
-        if(array_key_exists('HTTP_AUTHORIZATION', $_SERVER)){
-            $token = $_SERVER['HTTP_AUTHORIZATION'];
+        if(array_key_exists('HTTP_X_AUTH', $_SERVER)){
+            $token = $_SERVER['HTTP_X_AUTH'];
             if($getPayload = $jwt->verifyToken($token)){ //验证token是否有效
-                im_log("error", $getPayload);
                 if(is_array($getPayload)){
                     session('user', $getPayload['user']);
                 }else{

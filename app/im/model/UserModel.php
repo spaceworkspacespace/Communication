@@ -78,19 +78,19 @@ class UserModel extends Model implements IUserModel {
     public function getFriendByIdOrName($keyword, $no, $count)
     {
         return Db::table('cmf_user')
-        ->where('id', '=', $keyword)
-        ->whereOr('user_nickname','LIKE','%'.$keyword.'%')
-        ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
-        ->page($no, $count)
-        ->select()
-        ->toArray();
+            ->where('id', '=', $keyword)
+            ->whereOr('user_nickname','LIKE','%'.$keyword.'%')
+            ->field('user_nickname AS username,id,avatar,signature AS sign,sex')
+            ->page($no, $count)
+            ->select()
+            ->toArray();
     }
     
     public function getFriendById($id)
     {
         return Db::table("cmf_user")
-        ->where(['id' => $id])
-        ->find('user_nickname AS username,id,avatar,signature AS sign,sex');
+            ->where(['id' => $id])
+            ->find('user_nickname AS username,id,avatar,signature AS sign,sex');
     }
 
 

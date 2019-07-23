@@ -74,19 +74,19 @@ class UserController extends Controller {
 //         var_dump(cmf_get_current_user());
         $user = cmf_get_current_user();
         $user = [
-                'birthday'=> $user["birthday"],
-                'account'=> $user["last_login_time"], // 账号 user_login
-                'username'=>$user["user_nickname"], // 用户名 user_nickname 没有时为 user_login
-                'usertype'=>$user["user_type"] !==1?  "会员" : "admin",
-                'id'=>$user["id"], // id
-                'avatar'=> $user["avatar"], // 头像地址
-                'sign'=>$user["signature"], // 签名信息
+                'birthday'=> array_get($user, "birthday"),
+                'account'=> array_get($user, "last_login_time"), // 账号 user_login
+                'username'=>array_get($user, "user_nickname"), // 用户名 user_nickname 没有时为 user_login
+                'usertype'=>array_get($user, "user_type") !==1?  "会员" : "admin",
+                'id'=>array_get($user, "id"), // id
+                'avatar'=> array_get($user, "avatar"), // 头像地址
+                'sign'=>array_get($user, "signature"), // 签名信息
                 'status'=>"online" , // 是否在线
-                'sex'=>$user["sex"] !== 1?($user["sex"] !== 0?"女":"保密"): "男",
-                'lastlogintime'=>$user["last_login_time"], // 最后登录时间
-                'createtime'=>$user["create_time"], // 注册时间
-                'useremail'=>$user["user_email"], // 邮箱
-                'mobile'=>$user["mobile"], // 手机号码
+                'sex'=>array_get($user, "sex") !== 1?(array_get($user, "sex") !== 0?"女":"保密"): "男",
+                'lastlogintime'=>array_get($user, "last_login_time"), // 最后登录时间
+                'createtime'=>array_get($user, "create_time"), // 注册时间
+                'useremail'=>array_get($user, "user_email"), // 邮箱
+                'mobile'=>array_get($user, "mobile"), // 手机号码
             ];
         $this->error("", "/", $user, 0);
     }
