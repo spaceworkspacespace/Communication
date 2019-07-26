@@ -94,7 +94,8 @@ class UserController extends Controller {
     /**
      * 更新用户信息
      */
-    public function putInfo($id, $sign=null) {
+    public function putInfo($id, $birthday = null, $username = null, $avatar = null, 
+        $sign = null, $status = null, $sex = null, $useremail = null, $mobile = null) {
         $reMessage = "";
         $reData = [];
         $failure = false;
@@ -105,7 +106,14 @@ class UserController extends Controller {
                 return;
             }
             $reData = SingletonServiceFactory::getUserService()->updateUser($this->userId,  [
-                "sign"=>$sign
+                "sign" => $sign,
+                "birthday" => $birthday,
+                "username" => $username,
+                "avatar" => $avatar,
+                "status" => $status,
+                "sex" => $sex,
+                "useremail" => $useremail,
+                "mobile" => $mobile
             ]);
             
         } catch(OperationFailureException $e){
@@ -114,7 +122,7 @@ class UserController extends Controller {
         } finally {
             if ($failure) {
                 // 防止没有设置消息的情况
-                if (count($reMessage) == 0) {
+                if (!$reMessage) {
                     $reMessage="修改失败.";
                 }
                 $this->success($reMessage, "/", $reData, 0);

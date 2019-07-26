@@ -11,6 +11,28 @@ class UserService implements IUserService {
    
     public function updateUser($userId, $data) {
         try {
+            if(!is_null($data["status"])){
+                if($data["status"] === "online"){
+                    $data["status"] = 1;
+                }else if($data["status"] === "offline"){
+                    $data["status"] = 2;
+                }else{
+                    throw new OperationFailureException("请求错误, 请重试!");
+                }
+            }
+            
+            if(!is_null($data["sex"])){
+                if($data["sex"] === "保密"){
+                    $data["sex"] = 0;
+                }else if($data["sex"] === "男"){
+                    $data["sex"] = 1;
+                }else if($data["sex"] === "女"){
+                    $data["sex"] = 2;
+                }else{
+                    throw new OperationFailureException("请求错误, 请重试!");
+                }
+            }
+            
             // 字段过滤和映射
             array_filter($data, function($m) {
                 return is_string($m);
@@ -18,13 +40,16 @@ class UserService implements IUserService {
             // 备份将要修改的数据, 作为返回值
             $rawData = $data;
             array_key_replace($data, [
-                "sign"=>"signature"
+                "sign"=>"signature",
+                "username" => "user_nickname",
+                "useremail" => "user_email",
+                "status" => "user_status"
             ]);
             // 没有要修改的数据, 直接为成功
             if (count($data) == 0) {
                 return [];
             }
-                
+            
             $query = new Query(Db::connect(array_merge(config("database"), ['prefix'   => ''])));
             $affected = $query->table("cmf_user")
                 ->where("id=:id")
